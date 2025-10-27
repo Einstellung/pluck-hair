@@ -77,59 +77,61 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    ROS 2 系统总体架构                            │
+│          燕窝挑毛系统 - PC端（基于ROS 2 Humble）                 │
 │                                                                  │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │           业务逻辑层 (Application Layer)                     ││
+│  │        业务逻辑层 (applications包 - ROS适配层)              ││
 │  │                                                               ││
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      ││
-│  │  │  任务调度器  │  │  状态管理器  │  │  异常处理器  │      ││
-│  │  │ (Scheduler)  │  │  (State Mgr) │  │ (Error Hdlr) │      ││
+│  │  │  托盘定位    │  │  异物检测    │  │  视觉伺服    │      ││
+│  │  │   业务       │  │   业务       │  │   业务       │      ││
 │  │  └──────────────┘  └──────────────┘  └──────────────┘      ││
-│  │                                                               ││
+│  │  ┌──────────────┐  ┌──────────────┐                        ││
+│  │  │  任务调度    │  │  坐标管理    │  ROS节点：负责通信    ││
+│  │  │   业务       │  │   业务       │  和消息转换            ││
+│  │  └──────────────┘  └──────────────┘                        ││
 │  └─────────────────────────────────────────────────────────────┘│
-│                              ▲│                                  │
-│                              ││ ROS 2 Services/Topics/Actions    │
-│                              │▼                                  │
+│                       ↕ 直接调用（函数调用）                     │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │              核心功能层 (Core Capability Layer)              ││
+│  │        核心能力层 (core包 - 框架无关的纯库)                 ││
 │  │                                                               ││
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      ││
-│  │  │  视觉处理    │  │  运动计算    │  │  坐标管理    │      ││
+│  │  │  vision能力  │  │  motion能力  │  │  state能力   │      ││
 │  │  │              │  │              │  │              │      ││
-│  │  │ • 深度学习   │  │ • IBVS伺服   │  │ • TF树管理   │      ││
-│  │  │ • 图像处理   │  │ • 坐标转换   │  │ • 手眼标定   │      ││
-│  │  │ • 托盘定位   │  │ • 运动规划   │  │              │      ││
+│  │  │ •异物检测器  │  │ •坐标转换    │  │ •状态机      │      ││
+│  │  │ •托盘定位器  │  │ •运动学计算  │  │ •异常处理    │      ││
+│  │  │ •IBVS控制器  │  │ •轨迹规划    │  │              │      ││
+│  │  │ •图像处理    │  │              │  │              │      ││
 │  │  └──────────────┘  └──────────────┘  └──────────────┘      ││
 │  │                                                               ││
+│  │  特点：不依赖ROS，可独立测试和复用                           ││
 │  └─────────────────────────────────────────────────────────────┘│
-│                              ▲│                                  │
-│                              ││                                  │
-│                              │▼                                  │
+│                       ↕ ROS Topic/Service                        │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │            硬件接口层 (Hardware Interface Layer)             ││
+│  │            硬件接口层 (hardware包)                           ││
 │  │                                                               ││
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      ││
 │  │  │  相机驱动    │  │  PLC通信     │  │  数据存储    │      ││
-│  │  │              │  │              │  │              │      ││
 │  │  │ • USB接口    │  │ • PROFINET   │  │ • 数据库     │      ││
 │  │  │ • 图像发布   │  │  (待细化)    │  │ • 文件系统   │      ││
 │  │  └──────────────┘  └──────────────┘  └──────────────┘      ││
-│  │                                                               ││
 │  └─────────────────────────────────────────────────────────────┘│
-│                              ▲│                                  │
-│                              ││                                  │
-│                              │▼                                  │
-│               ┌──────────┐  ┌──────────┐  ┌──────────┐         │
-│               │   相机   │  │   PLC    │  │  数据库  │         │
-│               └──────────┘  └──────────┘  └──────────┘         │
-│                                                                  │
-│  横向支撑：                                                       │
+│                       ↕                                          │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │ • 配置管理 (config/)                                         ││
-│  │ • 日志管理 (logs/)                                           ││
-│  │ • 工具脚本 (scripts/)                                        ││
+│  │              物理硬件                                         ││
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                  ││
+│  │  │   相机   │  │   PLC    │  │  数据库  │                  ││
+│  │  └──────────┘  └──────────┘  └──────────┘                  ││
 │  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  横向支撑（utils包）：                                            │
+│  • 配置管理  • 日志管理  • 工具脚本  • 性能监控                  │
+│                                                                  │
+│  关键设计原则：                                                   │
+│  ✓ 依赖倒置：applications依赖core，core不依赖applications        │
+│  ✓ 框架隔离：core完全不知道ROS的存在                             │
+│  ✓ 按能力分层：core按技术能力（vision/motion/state）             │
+│  ✓ 按业务分层：applications按业务功能（托盘定位/异物检测等）     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -160,9 +162,8 @@
 ```
 pluck_ws/                          # ROS 2 工作空间根目录
 ├── src/                           # 源代码目录
-│   ├── core/                      # 核心业务包
-│   ├── vision/                    # 视觉处理包
-│   ├── motion/                    # 运动计算包
+│   ├── core/                      # 核心能力包（框架无关的纯库）
+│   ├── applications/              # 业务逻辑包（ROS节点，组装core能力）
 │   ├── hardware/                  # 硬件接口包
 │   ├── msgs/                      # 自定义消息定义包
 │   └── utils/                     # 工具和配置包
@@ -179,9 +180,8 @@ pluck_ws/                          # ROS 2 工作空间根目录
 | Package名称 | 类型 | 主要职责 | 依赖 |
 |------------|------|----------|------|
 | **msgs** | 消息定义 | 定义所有自定义msg/srv/action | 无ROS包依赖 |
-| **core** | 业务逻辑 | 任务调度、状态管理、流程控制 | msgs, vision, motion |
-| **vision** | 视觉处理 | 深度学习推理、IBVS、图像处理 | msgs, OpenCV, TensorRT, ViSP |
-| **motion** | 运动计算 | 坐标转换、TF管理、运动规划 | msgs, tf2_ros |
+| **core** | 核心能力库 | 视觉处理、运动计算、状态管理（框架无关的纯库） | OpenCV, TensorRT, ViSP等基础库 |
+| **applications** | 业务逻辑 | 托盘定位、异物检测、视觉伺服等业务（ROS节点） | core, msgs, ROS 2相关包 |
 | **hardware** | 硬件接口 | 相机驱动、PLC通信 | msgs, usb_cam/pylon_ros2 |
 | **utils** | 工具支撑 | 配置管理、日志工具、测试脚本 | msgs |
 
@@ -192,19 +192,27 @@ pluck_ws/                          # ROS 2 工作空间根目录
                     │    msgs     │ (消息定义，无依赖)
                     └──────┬──────┘
                            │
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │    core     │ (核心能力，框架无关)
+                    │  • vision   │ 只依赖基础库：
+                    │  • motion   │ OpenCV, TensorRT,
+                    │  • state    │ ViSP, numpy等
+                    └──────┬──────┘
+                           │
               ┌────────────┼────────────┐
               │            │            │
               ▼            ▼            ▼
-      ┌──────────┐  ┌────────────┐  ┌──────────┐
-      │  vision  │  │   motion   │  │ hardware │
-      └────┬─────┘  └─────┬──────┘  └────┬─────┘
-           │              │              │
-           └──────┬───────┴──────┬───────┘
-                  │              │
-                  ▼              ▼
-           ┌──────────┐    ┌──────────┐
-           │   core   │    │  utils   │
-           └──────────┘    └──────────┘
+      ┌──────────────┐ ┌──────────┐ ┌──────────┐
+      │ applications │ │ hardware │ │  utils   │
+      │ (ROS节点)    │ │          │ │          │
+      └──────────────┘ └──────────┘ └──────────┘
+       依赖: core,      依赖: msgs   依赖: msgs
+             msgs,
+             ROS 2
+
+依赖方向：向上依赖，core不依赖任何ROS包
 ```
 
 ---
@@ -238,123 +246,142 @@ msgs/
 - 被所有其他包依赖
 - 接口一旦确定，尽量保持稳定
 
-### 4.2 core（核心业务包）
+### 4.2 core（核心能力包 - 框架无关）
 
 ```
 core/
-├── core/                          # Python包目录
+├── core/                          # Python包目录（纯库，不依赖ROS）
 │   ├── __init__.py
-│   ├── task_scheduler.py          # 任务调度器（Python原型）
-│   ├── state_machine.py           # 状态机（Python原型）
-│   ├── error_handler.py           # 异常处理器
-│   └── workflow_executor.py       # 工作流执行器
-├── src/                           # C++源码目录
-│   ├── task_scheduler_node.cpp    # 任务调度器（C++版本，后期）
-│   ├── state_machine_node.cpp     # 状态机（C++版本，后期）
-│   └── workflow_executor_node.cpp
+│   │
+│   ├── vision/                    # 视觉处理能力
+│   │   ├── __init__.py
+│   │   ├── object_detector.py     # 异物检测器（纯类）
+│   │   ├── tray_locator.py        # 托盘定位器（纯类）
+│   │   ├── ibvs_controller.py     # IBVS控制器（纯类）
+│   │   └── image_processor.py     # 图像处理工具
+│   │
+│   ├── motion/                    # 运动计算能力
+│   │   ├── __init__.py
+│   │   ├── coordinate_transformer.py  # 坐标转换
+│   │   ├── kinematics.py          # 运动学计算
+│   │   └── trajectory_planner.py  # 轨迹规划（预留）
+│   │
+│   └── state/                     # 状态管理能力
+│       ├── __init__.py
+│       ├── state_machine.py       # 状态机（纯类）
+│       └── error_handler.py       # 异常处理器
+│
+├── src/                           # C++源码（后期性能优化）
+│   ├── vision/
+│   │   ├── object_detector.cpp
+│   │   ├── tensorrt_engine.cpp    # TensorRT推理引擎
+│   │   └── ibvs_controller.cpp
+│   ├── motion/
+│   │   └── coordinate_transformer.cpp
+│   └── state/
+│       └── state_machine.cpp
+│
 ├── include/core/                  # C++头文件
-│   ├── task_scheduler.hpp
-│   └── state_machine.hpp
-├── launch/                        # Launch文件
-│   ├── system.launch.py           # 系统主启动文件
-│   └── core_only.launch.py        # 仅核心业务模块
-├── config/                        # 配置文件
-│   ├── system.yaml                # 系统参数
-│   └── state_machine.yaml         # 状态机配置
-├── test/                          # 测试文件
-│   ├── test_state_machine.py
-│   └── test_task_scheduler.py
-├── CMakeLists.txt
-├── package.xml
-└── README.md
-```
-
-**设计说明：**
-- 初期Python实现（core/目录）
-- 后期C++替换（src/目录）
-- Launch文件通过参数切换Python/C++节点
-
-### 4.3 vision（视觉处理包）
-
-```
-vision/
-├── vision/                        # Python包目录
-│   ├── __init__.py
-│   ├── object_detector.py         # 异物检测节点（Python + ONNX/PyTorch）
-│   ├── tray_locator.py            # 托盘定位节点
-│   ├── ibvs_controller.py         # IBVS控制器（Python + ViSP）
-│   └── image_processor.py         # 图像预处理工具
-├── src/                           # C++源码目录
-│   ├── object_detector_node.cpp   # 异物检测节点（C++ + TensorRT）
-│   ├── tray_locator_node.cpp      # 托盘定位节点（C++ + OpenCV）
-│   ├── ibvs_controller_node.cpp   # IBVS控制器（C++ + ViSP）
-│   └── tensorrt_engine.cpp        # TensorRT推理引擎封装
-├── include/vision/                # C++头文件
-│   ├── object_detector.hpp
-│   ├── tensorrt_engine.hpp
-│   └── ibvs_controller.hpp
+│   ├── vision/
+│   │   ├── object_detector.hpp
+│   │   └── tensorrt_engine.hpp
+│   ├── motion/
+│   │   └── coordinate_transformer.hpp
+│   └── state/
+│       └── state_machine.hpp
+│
 ├── models/                        # 深度学习模型文件
-│   ├── foreign_object_detector.onnx   # ONNX模型（Python用）
-│   ├── foreign_object_detector.trt    # TensorRT引擎（C++用）
-│   └── model_config.yaml          # 模型配置
-├── calibration/                   # 标定数据
-│   ├── hand_eye.yaml              # 手眼标定参数
-│   └── camera_intrinsics.yaml     # 相机内参
-├── launch/
-│   ├── vision_system.launch.py    # 视觉系统启动
-│   └── ibvs_only.launch.py
-├── config/
-│   ├── object_detection.yaml      # 检测参数
-│   ├── ibvs.yaml                  # IBVS参数
-│   └── tray_localization.yaml
-├── test/
+│   ├── foreign_object_detector.onnx
+│   ├── foreign_object_detector.trt
+│   └── model_config.yaml
+│
+├── test/                          # 单元测试（不需要ROS环境）
 │   ├── test_object_detector.py
-│   └── test_ibvs.py
+│   ├── test_ibvs_controller.py
+│   └── test_state_machine.py
+│
 ├── scripts/                       # 工具脚本
-│   ├── convert_onnx_to_trt.py     # ONNX→TensorRT转换
-│   └── test_inference.py          # 推理测试
+│   ├── convert_onnx_to_trt.py     # 模型转换
+│   └── benchmark_inference.py     # 性能测试
+│
 ├── CMakeLists.txt
-├── package.xml
+├── package.xml                    # 只依赖：OpenCV, numpy, ViSP等
 └── README.md
 ```
 
 **设计说明：**
-- 深度学习推理：Python用ONNX Runtime，C++用TensorRT
-- IBVS：Python用visp_python，C++用ViSP C++ API
-- models/目录存放模型文件，版本控制时可用Git LFS
+- ✅ **完全框架无关**：不依赖ROS，可在任何项目中使用
+- ✅ **按能力模块组织**：vision/motion/state清晰分离
+- ✅ **可独立测试**：test/中的测试不需要ROS环境
+- ✅ **Python→C++替换**：接口一致，实现可替换
 
-### 4.4 motion（运动计算包）
+### 4.3 applications（业务逻辑包 - ROS适配层）
 
 ```
-motion/
-├── motion/                        # Python包目录
+applications/
+├── applications/                  # Python包目录（ROS节点）
 │   ├── __init__.py
-│   ├── tf_manager.py              # TF管理节点
-│   ├── coordinate_transformer.py  # 坐标转换工具
-│   └── motion_planner.py          # 运动规划（预留MoveIt接口）
-├── src/                           # C++源码（后期）
-│   ├── tf_manager_node.cpp
-│   └── coordinate_transformer.cpp
-├── include/motion/
-│   └── coordinate_transformer.hpp
-├── launch/
-│   └── motion_system.launch.py
-├── config/
-│   ├── workspace.yaml             # 预定义位姿
-│   └── tf_static.yaml             # 静态TF配置
-├── test/
-│   └── test_coordinate_transform.py
+│   │
+│   ├── tray_localization/         # 托盘定位业务
+│   │   ├── __init__.py
+│   │   └── tray_locator_node.py   # ROS节点，调用core.vision.tray_locator
+│   │
+│   ├── object_detection/          # 异物检测业务
+│   │   ├── __init__.py
+│   │   └── object_detector_node.py  # ROS节点，调用core.vision.object_detector
+│   │
+│   ├── visual_servoing/           # 视觉伺服业务
+│   │   ├── __init__.py
+│   │   └── ibvs_servo_node.py     # ROS节点，调用core.vision.ibvs_controller
+│   │
+│   ├── task_scheduling/           # 任务调度业务
+│   │   ├── __init__.py
+│   │   └── task_scheduler_node.py # ROS节点，编排整体工作流
+│   │
+│   ├── coordinate_management/     # 坐标管理业务
+│   │   ├── __init__.py
+│   │   └── tf_manager_node.py     # ROS节点，管理TF树
+│   │
+│   └── utils/                     # 业务层辅助工具
+│       ├── __init__.py
+│       └── ros_converters.py      # ROS消息转换工具
+│
+├── src/                           # C++版本（后期）
+│   ├── object_detection/
+│   │   └── object_detector_node.cpp
+│   └── visual_servoing/
+│       └── ibvs_servo_node.cpp
+│
+├── launch/                        # Launch文件
+│   ├── full_system.launch.py      # 完整系统启动
+│   ├── tray_localization.launch.py
+│   ├── object_detection.launch.py
+│   └── visual_servoing.launch.py
+│
+├── config/                        # 配置文件
+│   ├── tray_localization.yaml
+│   ├── object_detection.yaml
+│   ├── ibvs.yaml
+│   ├── workspace_poses.yaml       # 预定义位姿
+│   └── hand_eye_calibration.yaml  # 手眼标定
+│
+├── test/                          # 集成测试（需要ROS环境）
+│   ├── test_tray_localization_node.py
+│   ├── test_object_detection_node.py
+│   └── test_task_scheduler.py
+│
 ├── CMakeLists.txt
-├── package.xml
+├── package.xml                    # 依赖：core, msgs, rclpy/rclcpp
 └── README.md
 ```
 
 **设计说明：**
-- TF管理：发布静态和动态TF变换
-- 坐标转换：封装常用的坐标转换函数
-- 预留MoveIt接口（当前不使用）
+- ✅ **按业务功能组织**：托盘定位、异物检测、视觉伺服等
+- ✅ **ROS适配器模式**：节点负责ROS通信，业务逻辑在core
+- ✅ **职责单一**：只做消息转换和服务提供
+- ✅ **便于扩展**：新增业务功能，新建文件夹即可
 
-### 4.5 hardware（硬件接口包）
+### 4.4 hardware（硬件接口包）
 
 ```
 hardware/
@@ -386,7 +413,7 @@ hardware/
 - 如需自定义功能，在此包中封装
 - PLC通信：接口预留，后续细化
 
-### 4.6 utils（工具包）
+### 4.5 utils（工具包）
 
 ```
 utils/
@@ -476,104 +503,6 @@ utils/
 └─────────────────────────────────────────────────────────┘
 ```
 
-#### 5.1.2 深度学习推理引擎设计（TensorRT）
-
-**Python原型阶段（ONNX Runtime）：**
-```python
-# vision/vision/object_detector.py
-import onnxruntime as ort
-
-class ObjectDetectorNode(Node):
-    def __init__(self):
-        self.session = ort.InferenceSession("model.onnx")
-        self.srv = self.create_service(DetectObjects, 'detect_objects', self.callback)
-
-    def callback(self, request, response):
-        image = self.bridge.imgmsg_to_cv2(request.image)
-        # 推理
-        outputs = self.session.run(None, {'input': image})
-        # 后处理
-        response.objects = self.postprocess(outputs)
-        return response
-```
-
-**C++生产阶段（TensorRT）：**
-```cpp
-// vision/src/tensorrt_engine.cpp
-class TensorRTEngine {
-public:
-    void loadEngine(const std::string& engine_path);
-    std::vector<Detection> infer(const cv::Mat& image);
-
-private:
-    nvinfer1::IRuntime* runtime_;
-    nvinfer1::ICudaEngine* engine_;
-    nvinfer1::IExecutionContext* context_;
-    // CUDA内存管理
-};
-```
-
-**ONNX→TensorRT转换脚本：**
-```python
-# vision/scripts/convert_onnx_to_trt.py
-import tensorrt as trt
-
-def convert_onnx_to_tensorrt(onnx_path, trt_path):
-    builder = trt.Builder(logger)
-    network = builder.create_network()
-    parser = trt.OnnxParser(network, logger)
-    # 解析ONNX
-    parser.parse_from_file(onnx_path)
-    # 配置优化
-    config = builder.create_builder_config()
-    config.max_workspace_size = 1 << 30  # 1GB
-    config.set_flag(trt.BuilderFlag.FP16)  # 使用FP16加速
-    # 构建引擎
-    engine = builder.build_engine(network, config)
-    # 保存
-    with open(trt_path, 'wb') as f:
-        f.write(engine.serialize())
-```
-
-#### 5.1.3 IBVS集成方案（ViSP）
-
-**Python原型：**
-```python
-# vision/vision/ibvs_controller.py
-from visp.core import vpHomogeneousMatrix
-from visp.visual_features import vpFeaturePoint
-from visp.vs import vpServo
-
-class IbvsController:
-    def __init__(self):
-        self.servo = vpServo()
-        self.servo.setServo(vpServo.EYEINHAND_CAMERA)
-        self.servo.setInteractionMatrixType(vpServo.CURRENT)
-
-    def compute_velocity(self, current_features, desired_features):
-        # ViSP计算速度
-        v = self.servo.computeControlLaw()
-        return v
-```
-
-**C++版本：**
-```cpp
-// vision/src/ibvs_controller_node.cpp
-#include <visp3/vs/vpServo.h>
-#include <visp3/visual_features/vpFeaturePoint.h>
-
-class IbvsControllerNode : public rclcpp::Node {
-public:
-    void computeVelocity() {
-        vpColVector v = servo_.computeControlLaw();
-        // 发布到motion topic
-    }
-
-private:
-    vpServo servo_;
-};
-```
-
 ### 5.2 运动计算模块
 
 #### 5.2.1 TF树设计
@@ -594,69 +523,6 @@ world (全局坐标系，固定)
 - `world` → `tray_frame`：托盘定位后发布（静态）
 - `world` → `camera_optical_frame`：基于预定义位姿动态发布
 - 手眼标定参数：离线标定，启动时加载
-
-#### 5.2.2 坐标转换工具
-
-```python
-# motion/motion/coordinate_transformer.py
-class CoordinateTransformer:
-    def __init__(self, tf_buffer):
-        self.tf_buffer = tf_buffer
-
-    def transform_point(self, point, from_frame, to_frame):
-        """点坐标转换"""
-        transform = self.tf_buffer.lookup_transform(
-            to_frame, from_frame, rclcpp.Time())
-        return tf2_geometry_msgs.do_transform_point(point, transform)
-
-    def transform_pose(self, pose, from_frame, to_frame):
-        """位姿转换"""
-        # 类似实现
-        pass
-```
-
-### 5.3 状态管理模块
-
-#### 5.3.1 状态机设计
-
-**状态定义：**
-```python
-# core/core/state_machine.py
-from enum import Enum
-
-class SystemState(Enum):
-    IDLE = "idle"                      # 待机
-    LOCALIZING_TRAY = "localizing"     # 托盘定位
-    PLANNING_REGIONS = "planning"      # 区域规划
-    PRESSING = "pressing"              # 压板动作
-    DETECTING_OBJECTS = "detecting"    # 异物检测
-    IBVS_SERVOING = "ibvs_servoing"   # IBVS伺服
-    GRIPPING = "gripping"              # 夹取
-    CLEANING = "cleaning"              # 清洗
-    VERIFYING = "verifying"            # 质量检查
-    MOVING_NEXT = "moving_next"        # 移动下一区域
-    COMPLETED = "completed"            # 完成
-    ERROR = "error"                    # 异常
-```
-
-**状态转换：**
-```python
-class StateMachine:
-    def __init__(self):
-        self.state = SystemState.IDLE
-        self.transitions = {
-            SystemState.IDLE: [SystemState.LOCALIZING_TRAY],
-            SystemState.LOCALIZING_TRAY: [SystemState.PLANNING_REGIONS, SystemState.ERROR],
-            # ... 定义所有合法转换
-        }
-
-    def transition_to(self, new_state):
-        if new_state in self.transitions[self.state]:
-            self.state = new_state
-            self.on_state_enter(new_state)
-        else:
-            raise InvalidTransitionError()
-```
 
 ### 5.4 硬件接口模块
 
@@ -743,7 +609,7 @@ class PLCInterface(Node):
 
 **目录组织：**
 ```
-vision/models/
+core/models/                           # 所有模型统一放在core包
 ├── foreign_object_detector.onnx       # ONNX模型（Python用）
 ├── foreign_object_detector.trt        # TensorRT引擎（C++用）
 ├── labels.txt                         # 类别标签
@@ -752,7 +618,7 @@ vision/models/
 
 **配置文件：**
 ```yaml
-# vision/models/model_config.yaml
+# core/models/model_config.yaml
 model:
   name: "foreign_object_detector"
   version: "v1.0"
@@ -884,104 +750,204 @@ def publish_tray_tf(self, tray_pose):
 
 #### 7.3.1 接口一致性保证
 
-**关键原则：** ROS 2接口（Topic/Service/Action）保持一致
+**关键原则：**
+1. **Core层接口保持一致**：Python和C++实现相同的类和方法
+2. **Applications层ROS接口保持一致**：服务名、话题名、消息类型不变
 
-**示例：异物检测服务**
+**示例1：Core层接口一致**
 
 Python版本：
 ```python
-# vision/vision/object_detector.py
-class ObjectDetectorNode(Node):
-    def __init__(self):
-        super().__init__('object_detector')
-        self.srv = self.create_service(
-            DetectObjects,              # 服务类型
-            'detect_objects',           # 服务名
-            self.detect_callback        # 回调函数
-        )
+# core/core/vision/object_detector.py
+class ObjectDetector:
+    def __init__(self, model_path: str, confidence_threshold: float = 0.5):
+        pass
+
+    def detect(self, image: np.ndarray) -> List[ForeignObject]:
+        """检测异物"""
+        pass
 ```
 
-C++版本：
+C++版本（接口完全一致）：
 ```cpp
-// vision/src/object_detector_node.cpp
-class ObjectDetectorNode : public rclcpp::Node {
+// core/src/vision/object_detector.cpp
+class ObjectDetector {
 public:
-    ObjectDetectorNode() : Node("object_detector") {
-        srv_ = this->create_service<msgs::srv::DetectObjects>(
-            "detect_objects",          // 服务名（相同）
-            std::bind(&ObjectDetectorNode::detect_callback, ...)
-        );
-    }
+    ObjectDetector(const std::string& model_path, float confidence_threshold = 0.5);
+
+    std::vector<ForeignObject> detect(const cv::Mat& image);
 };
 ```
 
+**示例2：Applications层ROS接口一致**
+
+Python版本：
+```python
+# applications/applications/object_detection/object_detector_node.py
+from core.vision.object_detector import ObjectDetector  # 调用core
+
+class ObjectDetectorNode(Node):
+    def __init__(self):
+        super().__init__('object_detector')
+        self.detector = ObjectDetector(model_path)  # 使用core能力
+        self.srv = self.create_service(
+            DetectObjects, 'detect_objects', self.callback)
+```
+
+C++版本（ROS接口相同，只是调用C++ core）：
+```cpp
+// applications/src/object_detection/object_detector_node.cpp
+#include "core/vision/object_detector.hpp"  // 调用core
+
+class ObjectDetectorNode : public rclcpp::Node {
+public:
+    ObjectDetectorNode() : Node("object_detector") {
+        detector_ = std::make_unique<ObjectDetector>(model_path);  // 使用core能力
+        srv_ = this->create_service<msgs::srv::DetectObjects>(
+            "detect_objects", ...);  // 服务名相同
+    }
+private:
+    std::unique_ptr<ObjectDetector> detector_;
+};
+```
+
+**关键优势：**
+- ✅ Applications层代码几乎不需要改动
+- ✅ 只需要将`from core.vision import ...`改为`#include "core/vision/..."`
+- ✅ ROS通信接口完全不变
+
 #### 7.3.2 Launch文件切换
 
+**方式1：通过参数切换（推荐初期）**
+
 ```python
-# vision/launch/vision_system.launch.py
+# applications/launch/object_detection.launch.py
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.conditions import IfCondition, UnlessCondition
 
 def generate_launch_description():
-    # 声明参数：使用Python还是C++
     use_cpp = LaunchConfiguration('use_cpp', default='false')
 
     return LaunchDescription([
         DeclareLaunchArgument('use_cpp', default_value='false'),
 
-        # Python版本
+        # Python版本（调用core的Python实现）
         Node(
-            package='vision',
-            executable='object_detector_py',  # Python入口
+            package='applications',
+            executable='object_detector_node_py',
             name='object_detector',
+            parameters=[{'model_path': 'core/models/detector.onnx'}],
             condition=UnlessCondition(use_cpp)
         ),
 
-        # C++版本
+        # C++版本（调用core的C++实现）
         Node(
-            package='vision',
-            executable='object_detector_cpp',  # C++入口
+            package='applications',
+            executable='object_detector_node_cpp',
             name='object_detector',
+            parameters=[{'model_path': 'core/models/detector.trt'}],
             condition=IfCondition(use_cpp)
         )
     ])
 ```
 
-启动时选择：
+启动：
 ```bash
-# 使用Python版本
-ros2 launch vision vision_system.launch.py use_cpp:=false
+# 开发阶段：使用Python
+ros2 launch applications object_detection.launch.py use_cpp:=false
 
-# 使用C++版本
-ros2 launch vision vision_system.launch.py use_cpp:=true
+# 生产阶段：使用C++
+ros2 launch applications object_detection.launch.py use_cpp:=true
 ```
 
-#### 7.3.3 配置文件共享
+**方式2：直接切换（后期稳定后）**
+
+```python
+# 直接修改launch文件，删除条件判断
+Node(
+    package='applications',
+    executable='object_detector_node_cpp',  # 直接用C++
+    name='object_detector',
+)
+```
+
+#### 7.3.3 Core层Python和C++混用
+
+**通过pybind11实现混用（可选）**
+
+如果applications层用Python，但希望调用C++ core：
+
+```cpp
+// core/src/python_bindings.cpp
+#include <pybind11/pybind11.h>
+#include "core/vision/object_detector.hpp"
+
+namespace py = pybind11;
+
+PYBIND11_MODULE(core_cpp, m) {
+    py::class_<ObjectDetector>(m, "ObjectDetector")
+        .def(py::init<const std::string&, float>())
+        .def("detect", &ObjectDetector::detect);
+}
+```
+
+Python调用C++ core：
+```python
+# applications节点可以调用C++实现的core
+import core_cpp  # C++编译的Python模块
+
+detector = core_cpp.ObjectDetector("model.trt", 0.5)
+objects = detector.detect(image)
+```
+
+#### 7.3.4 配置文件共享
 
 **Python和C++都使用YAML配置：**
 
 ```yaml
-# vision/config/object_detection.yaml
+# applications/config/object_detection.yaml
 object_detector:
   ros__parameters:
-    model_path: "models/foreign_object_detector"
+    model_path: "core/models/foreign_object_detector"
     confidence_threshold: 0.5
     nms_threshold: 0.4
 ```
 
-Python加载：
+**Python节点加载：**
 ```python
+# applications/applications/object_detection/object_detector_node.py
 self.declare_parameter('model_path', '')
+self.declare_parameter('confidence_threshold', 0.5)
+
 model_path = self.get_parameter('model_path').value
+threshold = self.get_parameter('confidence_threshold').value
+
+# 传递给core
+from core.vision.object_detector import ObjectDetector
+self.detector = ObjectDetector(model_path, threshold)
 ```
 
-C++加载：
+**C++节点加载：**
 ```cpp
+// applications/src/object_detection/object_detector_node.cpp
 this->declare_parameter("model_path", "");
+this->declare_parameter("confidence_threshold", 0.5);
+
 std::string model_path = this->get_parameter("model_path").as_string();
+float threshold = this->get_parameter("confidence_threshold").as_double();
+
+// 传递给core
+#include "core/vision/object_detector.hpp"
+detector_ = std::make_unique<ObjectDetector>(model_path, threshold);
 ```
+
+**关键点：**
+- ✅ 配置文件完全相同
+- ✅ 参数加载代码几乎一致
+- ✅ 都通过构造函数传递给core层
 
 ---
 
@@ -997,14 +963,15 @@ pluck_ws/src/utils/config/              # 全局配置
 └── logging.yaml                         # 日志配置
 
 各package的config/目录：                 # 模块级配置
-├── vision/config/
-│   ├── object_detection.yaml
-│   ├── ibvs.yaml
-│   └── tray_localization.yaml
+├── applications/config/
+│   ├── object_detection.yaml          # 异物检测业务配置
+│   ├── visual_servoing.yaml           # 视觉伺服业务配置
+│   ├── tray_localization.yaml         # 托盘定位业务配置
+│   └── task_scheduling.yaml           # 任务调度配置
 ├── hardware/config/
 │   └── camera.yaml
 └── core/config/
-    └── state_machine.yaml
+    └── models.yaml                    # 模型配置（可选）
 ```
 
 ### 8.2 预定义位姿配置
@@ -1339,30 +1306,6 @@ class PLCInterface(Node):
 5. **PLC通信协议** - 细化通信接口（当前留白）
 6. **开发环境搭建** - Docker容器、依赖安装
 7. **测试策略** - 单元测试、集成测试方案
-
----
-
-## 附录
-
-### A. 术语表
-
-| 术语 | 全称 | 说明 |
-|------|------|------|
-| ROS 2 | Robot Operating System 2 | 机器人操作系统 |
-| TensorRT | NVIDIA TensorRT | 深度学习推理优化引擎 |
-| ViSP | Visual Servoing Platform | 视觉伺服平台 |
-| IBVS | Image-Based Visual Servoing | 基于图像的视觉伺服 |
-| TF | Transform | 坐标变换 |
-| ONNX | Open Neural Network Exchange | 神经网络交换格式 |
-| DDS | Data Distribution Service | 数据分发服务 |
-| PLC | Programmable Logic Controller | 可编程逻辑控制器 |
-
-### B. 参考资料
-
-- [ROS 2 Humble Documentation](https://docs.ros.org/en/humble/)
-- [TensorRT Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/)
-- [ViSP Tutorials](https://visp.inria.fr/tutorials/)
-- [OpenCV Documentation](https://docs.opencv.org/)
 
 ---
 
