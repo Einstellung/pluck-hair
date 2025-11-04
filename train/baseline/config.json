@@ -1,0 +1,45 @@
+{
+  "data": {
+    "root": "dataset",
+    "dataset_name": "oxford-iiit-pet",
+    "batch_size": 8,
+    "num_workers": 4,
+    "image_size": 256,
+    "valid_pct": 0.2,
+    "seed": 42,
+    "pin_memory": true,
+    "persistent_workers": true
+  },
+  "model": {
+    "architecture": "unet",
+    "encoder_name": "resnet34",
+    "encoder_weights": "imagenet",
+    "in_channels": 3,
+    "classes": 3,
+    "activation": null
+  },
+  "training": {
+    "max_epochs": 20,
+    "learning_rate": 0.0003,
+    "optimizer": "adamw",
+    "weight_decay": 0.0001,
+    "precision": 32,
+    "accelerator": "auto",
+    "devices": 1,
+    "accumulate_grad_batches": 1,
+    "log_every_n_steps": 10,
+    "gradient_clip_val": null,
+    "stochastic_weight_avg": false
+  },
+  "paths": {
+    "output_dir": "outputs",
+    "checkpoint_dir": "outputs/checkpoints",
+    "num_sanity_val_steps": 2
+  },
+  "early_stopping": {
+    "enabled": true,
+    "monitor": "val_loss",
+    "patience": 5,
+    "mode": "min"
+  }
+}
