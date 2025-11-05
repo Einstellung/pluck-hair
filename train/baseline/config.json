@@ -3,9 +3,9 @@
     "datamodule_class": "data_loader.voc_dataloader.VOC2012DataModule",
     "root": "dataset/VOC2012_train_val/VOC2012_train_val",
     "dataset_name": "voc2012",
-    "batch_size": 8,
+    "batch_size": 16,
     "num_workers": 4,
-    "image_size": 256,
+    "image_size": 512,
     "valid_pct": null,
     "seed": 42,
     "pin_memory": true,
@@ -24,8 +24,8 @@
     "activation": null
   },
   "training": {
-    "max_epochs": 20,
-    "learning_rate": 0.0003,
+    "max_epochs": 50,
+    "learning_rate": 0.001,
     "optimizer": "adamw",
     "weight_decay": 0.0001,
     "precision": 32,
@@ -44,7 +44,7 @@
   "early_stopping": {
     "enabled": true,
     "monitor": "val_loss",
-    "patience": 5,
+    "patience": 10,
     "mode": "min"
   }
 }

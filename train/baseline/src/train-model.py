@@ -280,7 +280,9 @@ class LightningSegmentationModel(LightningModule):
             targets = masks.long()
         else:
             masks = masks.long().squeeze(1) if masks.ndim == 4 else masks.long()
-            loss = F.cross_entropy(logits, masks)
+            # Use ignore_index=255 to exclude void/boundary regions from loss calculation
+            # This prevents the model from learning on ambiguous boundary pixels
+            loss = F.cross_entropy(logits, masks, ignore_index=255)
             preds = torch.argmax(logits, dim=1)
             targets = masks
 
@@ -322,21 +324,32 @@ class LightningSegmentationModel(LightningModule):
         return optimizer
 
     def _mean_iou(self, preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """
+        Calculate mean Intersection over Union (mIoU) across all classes.
+        Ignores pixels where target == 255 (void/ignore regions).
+        """
         num_classes = self.cfg.model.classes if self.cfg.model.classes > 1 else 2
         eps = 1e-6
         preds = preds.detach().view(preds.size(0), -1)
         targets = targets.detach().view(targets.size(0), -1)
 
+        # Create mask to exclude ignore regions (class 255)
+        valid_pixels = targets != 255
+
         ious = []
         for cls_idx in range(num_classes):
-            pred_mask = preds == cls_idx
-            target_mask = targets == cls_idx
+            # Only consider valid pixels (not ignore regions)
+            pred_mask = (preds == cls_idx) & valid_pixels
+            target_mask = (targets == cls_idx) & valid_pixels
+
             intersection = (pred_mask & target_mask).float().sum(dim=1)
             union = pred_mask.float().sum(dim=1) + target_mask.float().sum(dim=1) - intersection
+
             iou = (intersection + eps) / (union + eps)
             valid = union > 0
             if valid.any():
                 ious.append(iou[valid].mean())
+
         if not ious:
             return torch.tensor(0.0, device=preds.device)
         return torch.stack(ious).mean()

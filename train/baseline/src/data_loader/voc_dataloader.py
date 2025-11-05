@@ -97,22 +97,27 @@ class VOC2012Dataset(Dataset):
     
     def _transform(self, image: Image.Image, mask: Image.Image) -> tuple[torch.Tensor, torch.Tensor]:
         """Apply transformations to image and mask."""
-        
+
         # Convert mask to numpy for processing
         mask_np = np.array(mask, dtype=np.int64)
-        
-        # Handle boundary pixels (255) -> set to 0 (background) or ignore
-        mask_np[mask_np == 255] = 0
-        
+
+        # Preserve boundary pixels (255) as ignore index for loss calculation
+        # VOC uses 255 to mark void/boundary regions that should not contribute to loss
+        ignore_mask = (mask_np == 255)
+
         # If we have target_classes, remap mask to binary or subset
         if self.target_classes is not None:
             new_mask = np.zeros_like(mask_np)
             for new_idx, orig_idx in enumerate(self.target_classes, start=1):
                 new_mask[mask_np == orig_idx] = new_idx
+            # Preserve ignore regions
+            new_mask[ignore_mask] = 255
             mask_np = new_mask
-        
-        # Clip mask values to valid range
-        mask_np = np.clip(mask_np, 0, self.num_classes - 1)
+
+        # Clip mask values to valid range, but preserve 255 (ignore index)
+        # Only clip values in [0, num_classes-1] range
+        valid_mask = ~ignore_mask
+        mask_np[valid_mask] = np.clip(mask_np[valid_mask], 0, self.num_classes - 1)
         
         # Convert back to PIL for transforms
         mask = Image.fromarray(mask_np.astype(np.uint8), mode='L')
