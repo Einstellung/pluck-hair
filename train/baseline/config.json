@@ -1,21 +1,26 @@
 {
   "data": {
-    "root": "dataset",
-    "dataset_name": "oxford-iiit-pet",
+    "datamodule_class": "data_loader.voc_dataloader.VOC2012DataModule",
+    "root": "dataset/VOC2012_train_val/VOC2012_train_val",
+    "dataset_name": "voc2012",
     "batch_size": 8,
     "num_workers": 4,
     "image_size": 256,
-    "valid_pct": 0.2,
+    "valid_pct": null,
     "seed": 42,
     "pin_memory": true,
-    "persistent_workers": true
+    "persistent_workers": true,
+    "datamodule_kwargs": {
+      "train_split": "train",
+      "val_split": "val"
+    }
   },
   "model": {
     "architecture": "unet",
     "encoder_name": "resnet34",
     "encoder_weights": "imagenet",
     "in_channels": 3,
-    "classes": 3,
+    "classes": 21,
     "activation": null
   },
   "training": {

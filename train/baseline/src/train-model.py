@@ -7,13 +7,12 @@ This script wires together data augmentation (fastai), model definition
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
-
-import numpy as np
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODELS_DIR = BASE_DIR / "models"
@@ -36,39 +35,36 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import CSVLogger
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
-from torch.utils.data import DataLoader
-from torchvision.datasets import OxfordIIITPet
-
-from fastai.vision.all import (
-    DataBlock,
-    ImageBlock,
-    MaskBlock,
-    Normalize,
-    PILMask,
-    RandomSplitter,
-    Resize,
-    aug_transforms,
-    get_image_files,
-    imagenet_stats,
-)
 
 
 @dataclass
 class DataConfig:
-    root: str = "dataset"
-    dataset_name: str = "oxford-iiit-pet"
-    batch_size: int = 8
-    num_workers: int = 4
-    image_size: int = 256
-    valid_pct: float = 0.2
-    seed: int = 42
-    pin_memory: bool = True
-    persistent_workers: bool = True
+    """
+    Data configuration that gets passed to the datamodule.
+
+    The datamodule_class specifies which datamodule to use.
+    All other fields are dataset-agnostic and get passed to the datamodule's from_config() method.
+    """
+    datamodule_class: str  # e.g., "data_loader.voc_dataloader.VOC2012DataModule"
+    root: Optional[str] = None
+    dataset_name: Optional[str] = None
+    batch_size: Optional[int] = None
+    num_workers: Optional[int] = None
+    image_size: Optional[int] = None
+    valid_pct: Optional[float] = None
+    seed: Optional[int] = None
+    pin_memory: Optional[bool] = None
+    persistent_workers: Optional[bool] = None
+    datamodule_kwargs: Optional[Dict[str, Any]] = None
 
     def __post_init__(self) -> None:
-        self.root = str(self.root)
-        if not 0.0 < self.valid_pct < 1.0:
+        if self.root is not None:
+            self.root = str(self.root)
+        if self.dataset_name is not None:
+            self.dataset_name = str(self.dataset_name)
+        if self.valid_pct is not None and not 0.0 < self.valid_pct < 1.0:
             raise ValueError("data.valid_pct must be between 0 and 1.")
+        self.datamodule_kwargs = dict(self.datamodule_kwargs or {})
 
 
 @dataclass
@@ -182,99 +178,48 @@ def load_config(config_path: Path) -> ExperimentConfig:
     )
 
 
-class PetsDataModule(LightningDataModule):
-    """LightningDataModule wrapping a fastai DataBlock for Oxford-IIIT Pet."""
+def build_datamodule(cfg: ExperimentConfig) -> LightningDataModule:
+    """
+    Instantiate the configured LightningDataModule using polymorphism.
 
-    def __init__(self, config: ExperimentConfig):
-        super().__init__()
-        self.cfg = config
-        self._dls = None
+    This function dynamically imports the datamodule class specified in the config
+    and calls its from_config() factory method. The datamodule is responsible for
+    extracting the necessary parameters from the config.
 
-    @property
-    def dataset_root(self) -> Path:
-        return Path(self.cfg.data.root)
+    Args:
+        cfg: ExperimentConfig object containing data and model configuration
 
-    @property
-    def pets_dir(self) -> Path:
-        return self.dataset_root / self.cfg.data.dataset_name
+    Returns:
+        An instance of a LightningDataModule subclass
 
-    def prepare_data(self) -> None:
-        self.dataset_root.mkdir(parents=True, exist_ok=True)
-        try:
-            OxfordIIITPet(
-                root=str(self.dataset_root),
-                target_types="segmentation",
-                download=True,
-            )
-        except RuntimeError as err:
-            # torchvision raises if files are missing; re-raise for clarity.
-            raise RuntimeError(f"Failed to prepare Oxford-IIIT Pet dataset: {err}") from err
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        if self._dls is not None:
-            return
-
-        images_path = self.pets_dir / "images"
-        masks_path = self.pets_dir / "annotations" / "trimaps"
-
-        if not images_path.exists() or not masks_path.exists():
-            raise RuntimeError(
-                f"Expected dataset folders not found at {images_path} and {masks_path}. "
-                "Please ensure download completed successfully."
-            )
-
-        def label_func(fn: Path) -> PILMask:
-            mask_path = masks_path / f"{fn.stem}.png"
-            mask = PILMask.create(mask_path)
-            mask_arr = np.array(mask, dtype=np.int64) - 1  # dataset masks are 1-indexed
-            mask_arr = np.clip(mask_arr, 0, None)
-
-            if self.cfg.model.classes <= 1:
-                mask_arr = (mask_arr > 0).astype(np.uint8)
-            else:
-                max_idx = self.cfg.model.classes - 1
-                mask_arr = np.clip(mask_arr, 0, max_idx).astype(np.uint8)
-
-            return PILMask.create(mask_arr)
-
-        if self.cfg.model.classes <= 1:
-            codes = ["background", "foreground"]
-        elif self.cfg.model.classes == 2:
-            codes = ["background", "pet"]
-        elif self.cfg.model.classes == 3:
-            codes = ["background", "pet", "outline"]
-        else:
-            codes = [f"class_{i}" for i in range(self.cfg.model.classes)]
-
-        datablock = DataBlock(
-            blocks=(ImageBlock, MaskBlock(codes=codes)),
-            get_items=get_image_files,
-            splitter=RandomSplitter(self.cfg.data.valid_pct, seed=self.cfg.data.seed),
-            get_y=label_func,
-            item_tfms=Resize(self.cfg.data.image_size, method="bilinear"),
-            batch_tfms=[
-                *aug_transforms(size=self.cfg.data.image_size, min_scale=0.75),
-                Normalize.from_stats(*imagenet_stats),
-            ],
+    Raises:
+        ValueError: If datamodule_class is not specified in config
+        ImportError: If the specified datamodule class cannot be imported
+    """
+    if not cfg.data.datamodule_class:
+        raise ValueError(
+            "No datamodule configured. Set 'data.datamodule_class' in the config JSON. "
+            "Example: 'data_loader.voc_dataloader.VOC2012DataModule'"
         )
 
-        self._dls = datablock.dataloaders(
-            source=images_path,
-            bs=self.cfg.data.batch_size,
-            num_workers=self.cfg.data.num_workers,
-            pin_memory=self.cfg.data.pin_memory,
-            persistent_workers=self.cfg.data.persistent_workers,
+    # Import the datamodule class
+    module_path, _, class_name = cfg.data.datamodule_class.rpartition(".")
+    if not module_path:
+        raise ValueError(
+            f"Invalid datamodule_class '{cfg.data.datamodule_class}'. "
+            "Expected format: 'module.submodule.ClassName'"
         )
 
-    def train_dataloader(self) -> DataLoader:
-        if self._dls is None:
-            self.setup()
-        return self._dls.train
+    try:
+        module = importlib.import_module(module_path)
+        datamodule_cls = getattr(module, class_name)
+    except (ImportError, AttributeError) as exc:
+        raise ImportError(
+            f"Failed to import '{cfg.data.datamodule_class}': {exc}"
+        ) from exc
 
-    def val_dataloader(self) -> DataLoader:
-        if self._dls is None:
-            self.setup()
-        return self._dls.valid
+    # Use polymorphic factory method - each datamodule knows how to build itself from config
+    return datamodule_cls.from_config(cfg)
 
 
 class LightningSegmentationModel(LightningModule):
@@ -470,7 +415,7 @@ def main() -> None:
     seed = args.seed if args.seed is not None else cfg.data.seed
     seed_everything(seed)
 
-    data_module = PetsDataModule(cfg)
+    data_module = build_datamodule(cfg)
     model = LightningSegmentationModel(cfg)
     trainer = build_trainer(cfg)
 
