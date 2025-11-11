@@ -1,6 +1,2 @@
-dataset
-outputs
-models
-.venv/
 **__pycache__/
 pluck_ws/
