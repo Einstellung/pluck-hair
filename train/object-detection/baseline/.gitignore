@@ -1,0 +1,7 @@
+dataset
+experiments/**
+docs/**
+outputs
+models
+.venv/
+**.pt

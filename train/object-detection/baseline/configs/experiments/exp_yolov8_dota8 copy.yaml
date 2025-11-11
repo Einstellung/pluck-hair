@@ -1,0 +1,21 @@
+_base_: ../base/training_defaults.yaml
+
+experiment:
+  name: yolo_dota8_smoke
+  output_dir: experiments
+
+detector:
+  type: yolo
+  runner: yolo
+  config:
+    model: yolov8n.pt
+    data_yaml: dataset/dota8/dota8.yaml
+    device: 0
+
+training:
+  epochs: 1
+  batch: 4
+  imgsz: 640
+  device: 0
+  project: experiments
+  name: yolo_dota8_smoke
