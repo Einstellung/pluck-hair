@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+import src.detectors  # noqa: F401
+import src.runners  # noqa: F401
 from src.core.config import load_config
 from src.core.interfaces import TrainingCallback
 from src.core.registry import DETECTORS, RUNNERS
