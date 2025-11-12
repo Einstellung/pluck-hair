@@ -13,8 +13,19 @@
 2. 运行最小 YOLO 烟雾实验：
    ```bash
    python scripts/train.py --config configs/experiments/exp_yolo_dota8.yaml
-   ```
+   ````
    该配置指向 `dataset/dota8` 迷你数据集，适合验证流程。
+
+### Orchestrator（隔离模式）
+
+Phase 1 开始引入多框架 orchestrator。以 YOLO 子工程为例：
+
+```bash
+uv run python orchestrator/scripts/train.py \
+  --config configs/experiments/exp_orchestrator_yolo_dota8.yaml
+```
+
+该命令会在 `experiments/yolov11_dota8_iso/` 下生成 orchestrator/框架日志与 `metrics.json`，并通过 `uv run --project frameworks/yolo` 触发独立的 YOLO 训练环境。
 
 ## 目录速览
 
