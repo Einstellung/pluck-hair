@@ -9,7 +9,7 @@ detector:
   runner: yolo
   config:
     model: yolo11n.pt  # 修正：YOLO11 没有 'v'
-    data_yaml: dataset/dota8/dota8.yaml
+    data_yaml: dataset/ultra/coco8.yaml
     device: 0
 
 training:

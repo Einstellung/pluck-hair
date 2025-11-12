@@ -8,8 +8,8 @@ detector:
   type: yolo
   runner: yolo
   config:
-    model: yolov8n-obb.pt
-    data_yaml: dataset/dota8/dota8.yaml
+    model: yolov8n.pt
+    data_yaml: dataset/ultra/coco8.yaml
     device: 0
 
 training:
