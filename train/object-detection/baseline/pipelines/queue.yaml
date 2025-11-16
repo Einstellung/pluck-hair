@@ -1,0 +1,154 @@
+- name: pluck_yolov8n
+  description: YOLOv8n on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolov8n_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 6
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolov8n_single
+  status: success
+- name: pluck_yolov8s
+  description: YOLOv8s on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolov8s_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 6
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolov8s_single
+  status: success
+- name: pluck_yolov8m
+  description: YOLOv8m on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolov8m_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 8
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolov8m_single
+  status: failed
+- name: pluck_yolov8l
+  description: YOLOv8l on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolov8l_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 10
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolov8l_single
+  status: pending
+- name: pluck_yolov8x
+  description: YOLOv8x on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolov8x_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 10
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolov8x_single
+  status: pending
+- name: pluck_yolo11n
+  description: YOLO11n on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolo11n_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 6
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolo11n_single
+  status: pending
+- name: pluck_yolo11s
+  description: YOLO11s on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolo11s_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 6
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolo11s_single
+  status: pending
+- name: pluck_yolo11m
+  description: YOLO11m on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolo11m_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 8
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolo11m_single
+  status: pending
+- name: pluck_yolo11l
+  description: YOLO11l on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolo11l_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 10
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolo11l_single
+  status: pending
+- name: pluck_yolo11x
+  description: YOLO11x on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_yolo11x_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 10
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/yolo11x_single
+  status: pending
+- name: pluck_rtdetr
+  description: RT-DETR large on single-class pluck dataset
+  command:
+  - python
+  - orchestrator/scripts/train.py
+  - --config
+  - configs/experiments/pluck/exp_orchestrator_rtdetr_pluck.yaml
+  device:
+  - 0
+  min_free_mem_gb: 8
+  max_retries: 1
+  retry_interval_sec: 120
+  output_dir: experiments/pluck/rtdetr_single
+  status: pending
