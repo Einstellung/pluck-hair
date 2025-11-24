@@ -15,10 +15,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 import numpy as np
 from PIL import Image
@@ -120,6 +121,37 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Optional JSON file describing class names. Accepts list or {id: name} dict.",
+    )
+    parser.add_argument(
+        "--existing-label-dir",
+        type=str,
+        default=None,
+        help=(
+            "Directory holding existing AnyLabeling JSON files. "
+            "Defaults to the output location (next to images unless --output-dir is set)."
+        ),
+    )
+    parser.add_argument(
+        "--existing-iou-thres",
+        type=float,
+        default=0.6,
+        help="IoU threshold to consider a prediction already covered by an existing label (default: 0.6).",
+    )
+    parser.add_argument(
+        "--incremental-prefix",
+        type=str,
+        default="predict_",
+        help="Prefix to apply to new incremental labels (default: predict_).",
+    )
+    parser.add_argument(
+        "--backup",
+        action="store_true",
+        help="If set, create a .bak alongside each JSON before overwriting.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run inference and report counts but do not write JSON files.",
     )
     parser.add_argument(
         "--skip-existing",
@@ -304,6 +336,97 @@ def detections_to_shapes(
     return shapes
 
 
+def load_existing_shapes(path: Path) -> List[Dict[str, object]]:
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    return payload.get("shapes", [])
+
+
+def _shape_to_rect(shape: Dict[str, object]) -> Tuple[float, float, float, float] | None:
+    points = shape.get("points")
+    if not isinstance(points, list) or len(points) < 2:
+        return None
+    try:
+        xs = [float(pt[0]) for pt in points]
+        ys = [float(pt[1]) for pt in points]
+    except Exception:
+        return None
+    x1, x2 = min(xs), max(xs)
+    y1, y2 = min(ys), max(ys)
+    if x2 <= x1 or y2 <= y1:
+        return None
+    return x1, y1, x2, y2
+
+
+def iou(a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]) -> float:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    inter_x1 = max(ax1, bx1)
+    inter_y1 = max(ay1, by1)
+    inter_x2 = min(ax2, bx2)
+    inter_y2 = min(ay2, by2)
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    inter_area = inter_w * inter_h
+    if inter_area == 0.0:
+        return 0.0
+    a_area = (ax2 - ax1) * (ay2 - ay1)
+    b_area = (bx2 - bx1) * (by2 - by1)
+    denom = a_area + b_area - inter_area
+    return inter_area / denom if denom > 0 else 0.0
+
+
+def filter_incremental_detections(
+    detections: List[Detection],
+    class_names: Sequence[str],
+    existing_shapes: List[Dict[str, object]],
+    iou_thres: float,
+    label_prefix: str,
+) -> Tuple[List[Dict[str, object]], int]:
+    """Return new shapes (prefixed labels) and count of filtered boxes."""
+    existing_rects = []
+    for sh in existing_shapes:
+        rect = _shape_to_rect(sh)
+        if rect:
+            existing_rects.append(rect)
+
+    kept_shapes: List[Dict[str, object]] = []
+    filtered = 0
+
+    for det in detections:
+        label = class_names[det.cls] if 0 <= det.cls < len(class_names) else str(det.cls)
+        rect = det.bbox
+        max_iou = max((iou(rect, r) for r in existing_rects), default=0.0)
+        if max_iou >= iou_thres:
+            filtered += 1
+            continue
+
+        x1, y1, x2, y2 = rect
+        kept_shapes.append(
+            {
+                "label": f"{label_prefix}{label}",
+                "score": float(det.score),
+                "points": [
+                    [float(x1), float(y1)],
+                    [float(x2), float(y1)],
+                    [float(x2), float(y2)],
+                    [float(x1), float(y2)],
+                ],
+                "group_id": None,
+                "description": "",
+                "difficult": False,
+                "shape_type": "rectangle",
+                "flags": {},
+                "attributes": {},
+                "kie_linking": [],
+            }
+        )
+
+    return kept_shapes, filtered
+
+
 def collect_images(images_dir: Path, recursive: bool, extensions: Sequence[str]) -> List[Path]:
     valid_ext = {ext.lower() for ext in extensions}
     if recursive:
@@ -383,6 +506,7 @@ def main() -> int:
         raise SystemExit(f"Image directory not found: {images_dir}")
 
     output_root = Path(args.output_dir).expanduser().resolve() if args.output_dir else None
+    existing_root = Path(args.existing_label_dir).expanduser().resolve() if args.existing_label_dir else None
 
     print(f"[INFO] Loading model: {args.model}")
     model = YOLO(args.model)
@@ -408,6 +532,11 @@ def main() -> int:
             (output_root / (img_path.stem + ".json"))
             if output_root is not None
             else img_path.with_suffix(".json")
+        )
+        existing_json = (
+            (existing_root / (img_path.stem + ".json"))
+            if existing_root is not None
+            else target_json
         )
         if args.skip_existing and target_json.exists():
             continue
@@ -443,8 +572,31 @@ def main() -> int:
                     )
 
         merged = merge_detections(detections, merge_iou=args.merge_iou, max_det=args.max_det)
-        shapes = detections_to_shapes(merged, class_names)
-        save_anylabel_json(target_json, img_path, width, height, shapes)
+        existing_shapes = load_existing_shapes(existing_json)
+        incremental_shapes, filtered = filter_incremental_detections(
+            merged,
+            class_names=class_names,
+            existing_shapes=existing_shapes,
+            iou_thres=args.existing_iou_thres,
+            label_prefix=args.incremental_prefix,
+        )
+        combined_shapes = existing_shapes + incremental_shapes
+
+        print(
+            f"[INFO] {img_path.name}: existing={len(existing_shapes)}, "
+            f"new_kept={len(incremental_shapes)}, filtered={filtered}"
+        )
+
+        if args.dry_run:
+            continue
+
+        if args.backup and target_json.exists():
+            bak = target_json.with_suffix(target_json.suffix + ".bak")
+            if not bak.exists():
+                bak.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(target_json, bak)
+
+        save_anylabel_json(target_json, img_path, width, height, combined_shapes)
 
     print("[INFO] Completed inference. JSON files ready for XAnyLabeling.")
     return 0
@@ -454,10 +606,19 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 # python scripts/predict_xanylabeling.py \
-#   --model experiments/pluck/full/yolo11s/yolo_run2/weights/best.pt \
+#   --model experiments/pluck/full/yolo8l/yolo_run3/weights/best.pt \
 #   --images /media/xinyuan/新加卷1/project/pluck/data/11-18 \
 #   --tile-size 640 \
 #   --overlap 0.2 \
 #   --index-range 127-150 \
 #   --conf-thres 0.1 \
 #   --merge-iou 0.6
+
+# python scripts/predict_xanylabeling.py \
+#   --model experiments/pluck/full/yolov8l/yolo_run3/weights/best.pt \
+#   --images /media/xinyuan/新加卷1/project/pluck/data/11-18 \
+#   --index-range 1-2 \
+#   --existing-iou-thres 0.2 \
+#   --incremental-prefix predict_debris \
+#   --conf-thres 0.2 \
+#   --backup
