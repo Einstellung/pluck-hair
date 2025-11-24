@@ -1,21 +1,20 @@
 experiment:
-  name: rtdetr_l_dota8_smoke
+  name: rtdetr_smoke_pluck
   framework: yolo
-  output_dir: experiments/rtdetr_l_dota8_smoke
-
+  output_dir: experiments/pluck/smoke/rtdetr
 shared_resources:
   datasets_root: /home/xinyuan/Desktop/pluck/code/train/object-detection/baseline
   weights_cache: models
-
 framework_cfg:
   project_dir: frameworks/yolo
   script: frameworks/yolo/scripts/train.py
   args:
     model: rtdetr-l.pt
-    data_yaml: dataset/dota8/dota8.yaml
-    epochs: 1
-    batch: 4
+    data_yaml: dataset/pluck_subset125_tiles640.yaml
+    epochs: 2
+    batch: 8
     imgsz: 640
     device: 0
     workers: 4
     task_type: hbb
+    nbs: 64

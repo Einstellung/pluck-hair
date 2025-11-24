@@ -1,25 +1,20 @@
 experiment:
-  name: yolo11s_large_external
+  name: yolov8l_full_pluck
   framework: yolo
-  output_dir: experiments/yolo11s_large_external_framework
-
+  output_dir: experiments/pluck/full/yolov8l
 shared_resources:
   datasets_root: /home/xinyuan/Desktop/pluck/code/train/object-detection/baseline
   weights_cache: models
-
 framework_cfg:
   project_dir: frameworks/yolo
   script: frameworks/yolo/scripts/train.py
   args:
-    model: yolo11s.pt
-    # data_yaml: dataset/custom_dataset_20251114.yaml
-    data_yaml: dataset/pluck_subset100_tiles640.yaml
+    model: yolov8l.pt
+    data_yaml: dataset/pluck_subset150_tiles640.yaml
     epochs: 100
-    batch: 50
+    batch: 12
     imgsz: 640
     device: 0
     workers: 4
     task_type: hbb
     nbs: 64
-
-# python orchestrator/scripts/train.py --config configs/experiments/exp_orchestrator_yolo11s_large.yaml

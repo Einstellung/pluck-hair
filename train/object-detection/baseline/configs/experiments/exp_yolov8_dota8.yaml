@@ -1,21 +1,21 @@
-_base_: ../base/training_defaults.yaml
-
 experiment:
   name: yolo_dota8_smoke
-  output_dir: experiments
+  framework: yolo
+  output_dir: experiments/yolov8_dota8_smoke
 
-detector:
-  type: yolo
-  runner: yolo
-  config:
+shared_resources:
+  datasets_root: /home/xinyuan/Desktop/pluck/code/train/object-detection/baseline
+  weights_cache: models
+
+framework_cfg:
+  project_dir: frameworks/yolo
+  script: frameworks/yolo/scripts/train.py
+  args:
     model: yolov8n.pt
     data_yaml: dataset/ultra/coco8.yaml
+    epochs: 1
+    batch: 4
+    imgsz: 640
     device: 0
-
-training:
-  epochs: 1
-  batch: 4
-  imgsz: 640
-  device: 0
-  project: experiments
-  name: yolo_dota8_smoke
+    workers: 4
+    task_type: hbb

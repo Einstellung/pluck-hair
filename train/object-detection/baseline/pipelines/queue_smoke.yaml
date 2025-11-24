@@ -157,7 +157,7 @@
   max_retries: 1
   retry_interval_sec: 120
   output_dir: experiments/pluck/smoke/yolo11x
-  status: success
+  status: pending
 - name: smoke_rtdetr
   description: smoke run for rtdetr
   command:
@@ -173,4 +173,4 @@
   max_retries: 1
   retry_interval_sec: 120
   output_dir: experiments/pluck/smoke/rtdetr
-  status: success
+  status: pending
