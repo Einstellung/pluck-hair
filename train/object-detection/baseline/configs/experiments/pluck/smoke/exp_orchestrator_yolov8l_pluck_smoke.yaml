@@ -10,7 +10,7 @@ framework_cfg:
   script: frameworks/yolo/scripts/train.py
   args:
     model: yolov8l.pt
-    data_yaml: dataset/pluck_subset125_tiles640.yaml
+    data_yaml: dataset/pluck_subset150_tiles640.yaml
     epochs: 2
     batch: 12
     imgsz: 640
