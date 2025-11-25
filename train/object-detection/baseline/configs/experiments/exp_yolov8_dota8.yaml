@@ -4,7 +4,7 @@ experiment:
   output_dir: experiments/yolov8_dota8_smoke
 
 shared_resources:
-  datasets_root: /home/xinyuan/Desktop/pluck/code/train/object-detection/baseline
+  datasets_root: .
   weights_cache: models
 
 framework_cfg:

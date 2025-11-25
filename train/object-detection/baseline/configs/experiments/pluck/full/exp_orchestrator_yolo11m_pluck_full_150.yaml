@@ -3,7 +3,7 @@ experiment:
   framework: yolo
   output_dir: experiments/pluck/full/yolo11m
 shared_resources:
-  datasets_root: /home/xinyuan/Desktop/pluck/code/train/object-detection/baseline
+  datasets_root: .
   weights_cache: models
 framework_cfg:
   project_dir: frameworks/yolo

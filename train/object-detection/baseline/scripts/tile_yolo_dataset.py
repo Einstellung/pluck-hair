@@ -270,3 +270,9 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# python scripts/tile_yolo_dataset.py \
+#     --dataset dataset/pluck_11-18_subset150_yolo \
+#     --tile-size 640 \
+#     --overlap 0.2 \
+#     --output-dir dataset/pluck_11-18_subset150_yolo/tiles_640

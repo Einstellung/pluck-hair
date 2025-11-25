@@ -617,7 +617,7 @@ if __name__ == "__main__":
 # python scripts/predict_xanylabeling.py \
 #   --model experiments/pluck/full/yolov8l/yolo_run3/weights/best.pt \
 #   --images /media/xinyuan/新加卷1/project/pluck/data/11-18 \
-#   --index-range 1-2 \
+#   --index-range 51-150 \
 #   --existing-iou-thres 0.2 \
 #   --incremental-prefix predict_debris \
 #   --conf-thres 0.2 \
