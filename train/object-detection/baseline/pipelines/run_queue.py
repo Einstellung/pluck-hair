@@ -136,10 +136,19 @@ def read_gpu_stats() -> Optional[Dict[int, Dict[str, float]]]:
         gpu_id, total, used = parts
         try:
             gpu_idx = int(gpu_id)
-            total_gb = float(total) / 1024 if float(total) > 32 else float(total)
-            used_gb = float(used) / 1024 if float(used) > 32 else float(used)
+            total_val = float(total)
+            used_val = float(used)
         except ValueError:
             continue
+
+        # nvidia-smi returns MiB without units; keep total/used in the same scale before diff.
+        if total_val > 1024:
+            total_gb = total_val / 1024
+            used_gb = used_val / 1024
+        else:
+            total_gb = total_val
+            used_gb = used_val
+
         stats[gpu_idx] = {
             "total": total_gb,
             "used": used_gb,
