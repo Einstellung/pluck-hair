@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from .interfaces import Database, DetectionRecord, SessionRecord
@@ -225,7 +225,31 @@ class PostgresDatabase(Database):
                 query = query.filter(DetectionModel.session_id == session_id)
             
             return query.scalar() or 0
-            
+
+        finally:
+            session.close()
+
+    def delete_detection(self, detection_id: str) -> bool:
+        """Delete a detection record."""
+        session = self._get_session()
+        try:
+            result = session.query(DetectionModel).filter(
+                DetectionModel.id == detection_id
+            ).delete()
+            session.commit()
+            return bool(result)
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Failed to delete detection: {e}")
+            raise
+        finally:
+            session.close()
+
+    def ping(self) -> None:
+        """Health check probe."""
+        session = self._get_session()
+        try:
+            session.execute(text("SELECT 1"))
         finally:
             session.close()
 

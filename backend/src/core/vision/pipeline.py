@@ -2,11 +2,15 @@
 
 import logging
 import time
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import numpy as np
 
 from .types import PipelineContext, PipelineResult
+
+if TYPE_CHECKING:  # pragma: no cover
+    from src.config import VisionConfig
+    from src.config import PipelineStepConfig
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +135,25 @@ class VisionPipeline:
             pipeline.add_step(step)
         
         logger.info(f"Created pipeline with {len(steps_config)} steps")
+        return pipeline
+
+    @classmethod
+    def from_vision_config(cls, vision_config: "VisionConfig") -> "VisionPipeline":
+        """Build pipeline from typed VisionConfig data."""
+        from .steps import create_step
+
+        pipeline = cls()
+
+        for step_config in vision_config.steps:
+            step_dict = {
+                "name": step_config.name,
+                "type": step_config.type,
+                "params": step_config.params,
+            }
+            step = create_step(step_dict)
+            pipeline.add_step(step)
+
+        logger.info(f"Created pipeline with {len(vision_config.steps)} steps")
         return pipeline
 
 
