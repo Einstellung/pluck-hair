@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from .interfaces import Database, DetectionRecord, SessionRecord
@@ -249,7 +249,7 @@ class PostgresDatabase(Database):
         """Health check probe."""
         session = self._get_session()
         try:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         finally:
             session.close()
 
