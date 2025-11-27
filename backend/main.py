@@ -85,8 +85,8 @@ def create_pipeline(config: AppConfig):
         VisionPipeline instance.
     """
     from src.core.vision.pipeline import VisionPipeline
-    # VisionPipeline.from_config expects the legacy dict format
-    return VisionPipeline.from_config(config.to_dict().get("vision", {}))
+
+    return VisionPipeline.from_vision_config(config.vision)
 
 
 def create_storage(config: AppConfig):

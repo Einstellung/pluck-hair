@@ -277,13 +277,30 @@ class Database(ABC):
     @abstractmethod
     def get_session(self, session_id: str) -> Optional[SessionRecord]:
         """Get session by ID.
-        
+
         Args:
             session_id: Session ID.
-            
+
         Returns:
             Session record or None.
         """
+        pass
+
+    @abstractmethod
+    def delete_detection(self, detection_id: str) -> bool:
+        """Delete a detection record by ID.
+
+        Args:
+            detection_id: Record ID to remove.
+
+        Returns:
+            True if a record was deleted, False if not found.
+        """
+        pass
+
+    @abstractmethod
+    def ping(self) -> None:
+        """Lightweight connectivity probe for health checks."""
         pass
 
 

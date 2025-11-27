@@ -161,20 +161,19 @@ def get_optional_image_storage(state: AppState = Depends(get_app_state)) -> Opti
 # ============================================================
 
 def check_database_health(database: Optional[Database]) -> tuple[bool, str]:
-    """Check database connectivity.
-    
+    """Check database connectivity with a lightweight probe.
+
     Args:
         database: Database instance or None.
-        
+
     Returns:
         Tuple of (is_healthy, status_message)
     """
     if database is None:
         return False, "not_configured"
-    
+
     try:
-        # Try a simple query to test connectivity
-        database.count_detections()
+        database.ping()
         return True, "ok"
     except Exception as e:
         logger.warning(f"Database health check failed: {e}")
@@ -182,20 +181,20 @@ def check_database_health(database: Optional[Database]) -> tuple[bool, str]:
 
 
 def check_storage_health(storage: Optional[ImageStorage]) -> tuple[bool, str]:
-    """Check image storage connectivity.
-    
+    """Check image storage connectivity using an existence probe.
+
     Args:
         storage: ImageStorage instance or None.
-        
+
     Returns:
         Tuple of (is_healthy, status_message)
     """
     if storage is None:
         return False, "not_configured"
-    
+
     try:
-        # Try to list objects (lightweight check)
-        storage.list_objects(prefix="__health_check__")
+        # Use a sentinel exists call instead of listing to avoid heavy scans
+        storage.exists("__health_check__")
         return True, "ok"
     except Exception as e:
         logger.warning(f"Storage health check failed: {e}")

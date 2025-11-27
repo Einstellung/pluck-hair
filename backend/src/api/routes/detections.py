@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from src.api.dependencies import get_database, get_optional_image_storage
@@ -85,13 +86,14 @@ async def list_detections(
     
     Returns paginated list of detections with filtering options.
     """
-    result = service.list_detections(
-        start_time=start_time,
-        end_time=end_time,
-        object_type=object_type,
-        session_id=session_id,
-        limit=limit,
-        offset=offset,
+    result = await run_in_threadpool(
+        service.list_detections,
+        start_time,
+        end_time,
+        object_type,
+        session_id,
+        limit,
+        offset,
     )
     
     # Convert DTOs to response models
@@ -131,7 +133,7 @@ async def get_detection_stats(
     
     Returns counts of detections grouped by object type.
     """
-    stats = service.get_stats(start_time=start_time, end_time=end_time)
+    stats = await run_in_threadpool(service.get_stats, start_time, end_time)
     
     return DetectionStatsResponse(
         total_detections=stats.total_detections,
@@ -152,7 +154,7 @@ async def get_detection(
     
     Returns detection details including bounding box and confidence.
     """
-    detection = service.get_detection(detection_id)
+    detection = await run_in_threadpool(service.get_detection, detection_id)
     
     if detection is None:
         raise HTTPException(

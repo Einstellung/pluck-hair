@@ -82,6 +82,7 @@ class TaskManager:
         image_storage: ImageStorage,
         database: Database,
         config: Optional[TaskManagerConfig] = None,
+        register_signals: bool = True,
     ):
         """Initialize TaskManager.
         
@@ -112,9 +113,12 @@ class TaskManager:
         self._storage_errors = 0
         self._storage_lock = threading.Lock()
         
-        # Register signal handlers for graceful shutdown
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # Register signal handlers for graceful shutdown when allowed
+        if register_signals and threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, self._signal_handler)
+            signal.signal(signal.SIGTERM, self._signal_handler)
+        else:
+            logger.debug("Skipping signal registration (not main thread or disabled)")
 
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""

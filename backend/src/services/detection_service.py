@@ -202,9 +202,6 @@ class DetectionService:
         Returns:
             True if deleted, False if not found.
         """
-        # Note: Database interface doesn't have delete_detection yet
-        # This would need to be added to the interface
-        logger.warning(f"delete_detection not implemented: {detection_id}")
-        return False
+        return self.database.delete_detection(detection_id)
 
 
