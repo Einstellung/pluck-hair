@@ -615,9 +615,9 @@ if __name__ == "__main__":
 #   --merge-iou 0.6
 
 # python scripts/predict_xanylabeling.py \
-#   --model experiments/pluck/full/yolov8l/yolo_run3/weights/best.pt \
+#   --model experiments/pluck/full/yolov8s/yolo_run5/weights/best.pt \
 #   --images /media/xinyuan/新加卷1/project/pluck/data/11-18 \
-#   --index-range 51-150 \
+#   --index-range 1-150 \
 #   --existing-iou-thres 0.2 \
 #   --incremental-prefix predict_debris \
 #   --conf-thres 0.2 \
