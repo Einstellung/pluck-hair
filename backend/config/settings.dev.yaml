@@ -1,0 +1,47 @@
+# Development Configuration
+# =========================
+# Override settings for local development
+# No external dependencies (MinIO, PostgreSQL) required
+
+app:
+  log_level: "DEBUG"
+
+# Use mock camera for development without hardware
+camera:
+  type: mock
+  mode: random  # random or directory
+  width: 640
+  height: 480
+  # image_dir: ./test_images  # For directory mode
+
+# Use local storage instead of MinIO
+storage:
+  images:
+    type: local
+    path: ./data/images
+  
+  # Use SQLite instead of PostgreSQL
+  database:
+    type: sqlite
+    path: ./data/pluck_dev.db
+    echo: false
+
+# Lower thresholds for testing
+vision:
+  pipeline:
+    steps:
+      - name: preprocess
+        type: resize
+        params:
+          size: [640, 640]
+      - name: detect
+        type: yolo
+        params:
+          model: models/best.pt
+          conf: 0.25  # Lower threshold for testing
+          device: cpu
+
+scheduler:
+  loop_delay_ms: 1000  # Slower for debugging
+  save_annotated: true
+
