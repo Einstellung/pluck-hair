@@ -25,6 +25,14 @@ camera:
   # Manual gain value (optional)
   # gain: 1.0
 
+  # White balance (optional)
+  # Modes: auto, once, manual, off
+  white_balance_mode: auto
+  # Manual white balance gains (only used when mode=manual)
+  # white_balance_red: 1.0
+  # white_balance_green: 1.0
+  # white_balance_blue: 1.0
+
 # Vision pipeline settings
 vision:
   pipeline:
@@ -103,5 +111,3 @@ api:
     allow_credentials: true
     allow_methods: ["*"]
     allow_headers: ["*"]
-
-

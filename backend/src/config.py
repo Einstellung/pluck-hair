@@ -31,6 +31,10 @@ class CameraConfig:
     gain_auto: bool = False
     exposure_time: Optional[float] = None
     gain: Optional[float] = None
+    white_balance_mode: str = "auto"  # auto, once, manual, off
+    white_balance_red: Optional[float] = None
+    white_balance_green: Optional[float] = None
+    white_balance_blue: Optional[float] = None
     # For mock camera
     mode: str = "random"
     image_dir: Optional[str] = None
@@ -247,15 +251,19 @@ class AppConfig:
             "camera": {
                 "type": self.camera.type,
                 "device_index": self.camera.device_index,
-                "exposure_auto": self.camera.exposure_auto,
-                "gain_auto": self.camera.gain_auto,
-                "exposure_time": self.camera.exposure_time,
-                "gain": self.camera.gain,
-                "mode": self.camera.mode,
-                "image_dir": self.camera.image_dir,
-                "width": self.camera.width,
-                "height": self.camera.height,
-            },
+            "exposure_auto": self.camera.exposure_auto,
+            "gain_auto": self.camera.gain_auto,
+            "exposure_time": self.camera.exposure_time,
+            "gain": self.camera.gain,
+            "white_balance_mode": self.camera.white_balance_mode,
+            "white_balance_red": self.camera.white_balance_red,
+            "white_balance_green": self.camera.white_balance_green,
+            "white_balance_blue": self.camera.white_balance_blue,
+            "mode": self.camera.mode,
+            "image_dir": self.camera.image_dir,
+            "width": self.camera.width,
+            "height": self.camera.height,
+        },
             "vision": {
                 "pipeline": {
                     "steps": [

@@ -17,12 +17,20 @@ class CameraConfig:
         gain_auto: Enable auto gain.
         exposure_time: Manual exposure time in microseconds.
         gain: Manual gain value.
+        white_balance_mode: White balance mode ("auto", "once", "manual", "off").
+        white_balance_red: Manual white balance red gain.
+        white_balance_green: Manual white balance green gain.
+        white_balance_blue: Manual white balance blue gain.
     """
     device_index: int = 1
     exposure_auto: bool = False
     gain_auto: bool = False
     exposure_time: Optional[float] = None
     gain: Optional[float] = None
+    white_balance_mode: str = "auto"
+    white_balance_red: Optional[float] = None
+    white_balance_green: Optional[float] = None
+    white_balance_blue: Optional[float] = None
 
 
 class CameraBase(ABC):
@@ -88,5 +96,3 @@ class CameraBase(ABC):
         """Context manager exit."""
         self.close()
         return False
-
-
