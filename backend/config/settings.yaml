@@ -27,7 +27,7 @@ camera:
 
   # White balance (optional)
   # Modes: auto, once, manual, off
-  white_balance_mode: auto
+  white_balance_mode: once
   # Manual white balance gains (only used when mode=manual)
   # white_balance_red: 1.0
   # white_balance_green: 1.0

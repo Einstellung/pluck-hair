@@ -31,7 +31,7 @@ class CameraConfig:
     gain_auto: bool = False
     exposure_time: Optional[float] = None
     gain: Optional[float] = None
-    white_balance_mode: str = "auto"  # auto, once, manual, off
+    white_balance_mode: str = "once"  # auto, once, manual, off
     white_balance_red: Optional[float] = None
     white_balance_green: Optional[float] = None
     white_balance_blue: Optional[float] = None

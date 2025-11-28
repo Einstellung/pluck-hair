@@ -33,6 +33,7 @@ class DahengCamera(CameraBase):
         self._dev_mgr = None
         self._cam = None
         self._is_opened = False
+        self._gx = None
 
     def open(self) -> bool:
         """Open the camera device.
@@ -46,6 +47,7 @@ class DahengCamera(CameraBase):
         try:
             # Import gxipy here to avoid import errors when SDK not installed
             import gxipy as gx
+            self._gx = gx
             
             # Initialize device manager
             self._dev_mgr = gx.DeviceManager()
@@ -104,6 +106,58 @@ class DahengCamera(CameraBase):
             if hasattr(self._cam, 'Gain'):
                 self._cam.Gain.set(self.config.gain)
                 logger.debug(f"Gain set to {self.config.gain}")
+        
+        # White balance
+        self._configure_white_balance()
+
+    def _configure_white_balance(self) -> None:
+        """Configure white balance based on config."""
+        gx = self._gx
+        if gx is None:
+            logger.debug("gxipy not loaded; skipping white balance configuration")
+            return
+        mode = (self.config.white_balance_mode or "auto").lower()
+        
+        # Mapping to SDK enum
+        mode_map = {
+            "off": gx.GxAutoEntry.OFF,
+            "auto": gx.GxAutoEntry.CONTINUOUS,
+            "continuous": gx.GxAutoEntry.CONTINUOUS,
+            "once": gx.GxAutoEntry.ONCE,
+            "manual": gx.GxAutoEntry.OFF,
+        }
+        if hasattr(self._cam, "BalanceWhiteAuto"):
+            if mode in mode_map:
+                try:
+                    self._cam.BalanceWhiteAuto.set(mode_map[mode])
+                    logger.debug(f"BalanceWhiteAuto set to {mode}")
+                except Exception as e:
+                    logger.warning(f"Failed to set BalanceWhiteAuto to {mode}: {e}")
+            else:
+                logger.warning(f"Unknown white_balance_mode '{mode}', skipping")
+        
+        # Manual ratios only when requested and supported
+        if mode == "manual":
+            if not (hasattr(self._cam, "BalanceRatioSelector") and hasattr(self._cam, "BalanceRatio")):
+                logger.warning("Manual white balance not supported by camera")
+                return
+            ratios = [
+                ("red", gx.GxBalanceRatioSelectorEntry.RED, self.config.white_balance_red),
+                ("green", gx.GxBalanceRatioSelectorEntry.GREEN, self.config.white_balance_green),
+                ("blue", gx.GxBalanceRatioSelectorEntry.BLUE, self.config.white_balance_blue),
+            ]
+            for name, selector_entry, value in ratios:
+                if value is None:
+                    continue
+                try:
+                    self._cam.BalanceRatioSelector.set(selector_entry)
+                    self._cam.BalanceRatio.set(value)
+                    logger.debug(f"BalanceRatio {name} set to {value}")
+                except Exception as e:
+                    logger.warning(f"Failed to set BalanceRatio {name}: {e}")
+        elif mode == "once":
+            # Some SDKs perform "once" automatically on set; no extra call needed.
+            logger.debug("White balance once mode requested")
 
     def close(self) -> None:
         """Close the camera device."""
@@ -183,5 +237,4 @@ class DahengCamera(CameraBase):
         if hasattr(self._cam, 'Gain'):
             self._cam.Gain.set(gain)
             logger.debug(f"Gain set to {gain}")
-
 
