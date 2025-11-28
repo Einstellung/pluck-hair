@@ -21,6 +21,8 @@ class CameraConfig:
         white_balance_red: Manual white balance red gain.
         white_balance_green: Manual white balance green gain.
         white_balance_blue: Manual white balance blue gain.
+        gamma_enable: Enable gamma correction.
+        gamma_value: Gamma parameter (camera-specific range).
     """
     device_index: int = 1
     exposure_auto: bool = False
@@ -31,6 +33,8 @@ class CameraConfig:
     white_balance_red: Optional[float] = None
     white_balance_green: Optional[float] = None
     white_balance_blue: Optional[float] = None
+    gamma_enable: bool = False
+    gamma_value: Optional[float] = None
 
 
 class CameraBase(ABC):

@@ -106,9 +106,35 @@ class DahengCamera(CameraBase):
             if hasattr(self._cam, 'Gain'):
                 self._cam.Gain.set(self.config.gain)
                 logger.debug(f"Gain set to {self.config.gain}")
+
+        # Gamma
+        self._configure_gamma()
         
         # White balance
         self._configure_white_balance()
+
+    def _configure_gamma(self) -> None:
+        """Configure gamma based on config."""
+        if not (self.config.gamma_enable or self.config.gamma_value):
+            return
+        cam = self._cam
+        if cam is None:
+            return
+        try:
+            if hasattr(cam, "GammaEnable"):
+                cam.GammaEnable.set(True)
+                logger.debug("GammaEnable set to True")
+            value = self.config.gamma_value
+            if value is not None:
+                # Some SDKs expose GammaParam or Gamma
+                if hasattr(cam, "GammaParam"):
+                    cam.GammaParam.set(value)
+                    logger.debug(f"GammaParam set to {value}")
+                elif hasattr(cam, "Gamma"):
+                    cam.Gamma.set(value)
+                    logger.debug(f"Gamma set to {value}")
+        except Exception as e:
+            logger.warning(f"Failed to configure gamma: {e}")
 
     def _configure_white_balance(self) -> None:
         """Configure white balance based on config."""
@@ -237,4 +263,3 @@ class DahengCamera(CameraBase):
         if hasattr(self._cam, 'Gain'):
             self._cam.Gain.set(gain)
             logger.debug(f"Gain set to {gain}")
-

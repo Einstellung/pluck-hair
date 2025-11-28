@@ -33,6 +33,10 @@ camera:
   # white_balance_green: 1.0
   # white_balance_blue: 1.0
 
+  # Gamma (optional)
+  # gamma_enable: true
+  # gamma_value: 1.0  # range depends on camera, e.g., 0.1~10
+
 # Vision pipeline settings
 vision:
   pipeline:

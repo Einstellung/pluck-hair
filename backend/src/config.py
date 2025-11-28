@@ -35,6 +35,8 @@ class CameraConfig:
     white_balance_red: Optional[float] = None
     white_balance_green: Optional[float] = None
     white_balance_blue: Optional[float] = None
+    gamma_enable: bool = False
+    gamma_value: Optional[float] = None
     # For mock camera
     mode: str = "random"
     image_dir: Optional[str] = None
@@ -259,6 +261,8 @@ class AppConfig:
             "white_balance_red": self.camera.white_balance_red,
             "white_balance_green": self.camera.white_balance_green,
             "white_balance_blue": self.camera.white_balance_blue,
+            "gamma_enable": self.camera.gamma_enable,
+            "gamma_value": self.camera.gamma_value,
             "mode": self.camera.mode,
             "image_dir": self.camera.image_dir,
             "width": self.camera.width,
