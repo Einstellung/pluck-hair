@@ -17,14 +17,6 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()
 
 
-class ObjectTypeEnum(enum.Enum):
-    """Object type enumeration for database."""
-    HAIR = "hair"
-    BLACK_SPOT = "black_spot"
-    YELLOW_SPOT = "yellow_spot"
-    UNKNOWN = "unknown"
-
-
 class SessionStatusEnum(enum.Enum):
     """Session status enumeration."""
     RUNNING = "running"
@@ -83,12 +75,7 @@ class DetectionModel(Base):
     bbox_y2 = Column(Float, nullable=False)
     
     # Classification
-    object_type = Column(
-        Enum(ObjectTypeEnum),
-        default=ObjectTypeEnum.UNKNOWN,
-        nullable=False,
-        index=True
-    )
+    object_type = Column(String(64), nullable=False, index=True)
     confidence = Column(Float, nullable=False)
     
     # Timestamps
@@ -112,7 +99,7 @@ class DetectionModel(Base):
 
     def __repr__(self):
         return (
-            f"<Detection(id={self.id}, type={self.object_type.value}, "
+            f"<Detection(id={self.id}, type={self.object_type}, "
             f"confidence={self.confidence:.2f})>"
         )
 

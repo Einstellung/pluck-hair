@@ -10,7 +10,7 @@ import pytest
 
 from src.core.camera.base import CameraBase
 from src.core.vision.pipeline import VisionPipeline
-from src.core.vision.types import BoundingBox, Detection, ObjectType, PipelineResult
+from src.core.vision.types import BoundingBox, Detection, PipelineResult
 from src.scheduler.task_manager import TaskManager, TaskManagerConfig
 from src.storage.interfaces import Database, DetectionRecord, ImageStorage, SessionRecord
 
@@ -158,12 +158,12 @@ class TestTaskManagerProcessing:
         detections = [
             Detection(
                 bbox=BoundingBox(x1=10, y1=20, x2=30, y2=40),
-                object_type=ObjectType.HAIR,
+                object_type="debris",
                 confidence=0.95,
             ),
             Detection(
                 bbox=BoundingBox(x1=50, y1=60, x2=70, y2=80),
-                object_type=ObjectType.BLACK_SPOT,
+                object_type="debris",
                 confidence=0.88,
             ),
         ]
@@ -186,8 +186,8 @@ class TestTaskManagerProcessing:
         mock_database.save_detections_batch.assert_called_once()
         saved_records = mock_database.save_detections_batch.call_args[0][0]
         assert len(saved_records) == 2
-        assert saved_records[0].object_type == "hair"
-        assert saved_records[1].object_type == "black_spot"
+        assert saved_records[0].object_type == "debris"
+        assert saved_records[1].object_type == "debris"
 
     def test_frame_count_increments(self, task_manager, mock_pipeline):
         """Test frame count increments correctly."""
@@ -220,8 +220,8 @@ class TestTaskManagerProcessing:
         mock_pipeline.run.return_value = PipelineResult(
             original_image=np.zeros((480, 640, 3), dtype=np.uint8),
             detections=[
-                Detection(BoundingBox(0, 0, 10, 10), ObjectType.HAIR, 0.9),
-                Detection(BoundingBox(20, 20, 30, 30), ObjectType.HAIR, 0.8),
+                Detection(BoundingBox(0, 0, 10, 10), "debris", 0.9),
+                Detection(BoundingBox(20, 20, 30, 30), "debris", 0.8),
             ],
             processing_time_ms=10.0,
             metadata={},
@@ -233,7 +233,7 @@ class TestTaskManagerProcessing:
         mock_pipeline.run.return_value = PipelineResult(
             original_image=np.zeros((480, 640, 3), dtype=np.uint8),
             detections=[
-                Detection(BoundingBox(40, 40, 50, 50), ObjectType.BLACK_SPOT, 0.85),
+                Detection(BoundingBox(40, 40, 50, 50), "debris", 0.85),
             ],
             processing_time_ms=10.0,
             metadata={},
@@ -253,7 +253,7 @@ class TestStorageRetry:
         """Test synchronous save succeeds."""
         image = np.zeros((480, 640, 3), dtype=np.uint8)
         detections = [
-            Detection(BoundingBox(0, 0, 10, 10), ObjectType.HAIR, 0.9),
+            Detection(BoundingBox(0, 0, 10, 10), "debris", 0.9),
         ]
         
         task_manager._session_id = "test-session"
@@ -435,7 +435,7 @@ class TestAnnotations:
         detections = [
             Detection(
                 bbox=BoundingBox(x1=100, y1=100, x2=200, y2=200),
-                object_type=ObjectType.HAIR,
+                object_type="debris",
                 confidence=0.95,
             ),
         ]
@@ -468,7 +468,7 @@ class TestAnnotations:
         mock_pipeline.run.return_value = PipelineResult(
             original_image=np.zeros((480, 640, 3), dtype=np.uint8),
             detections=[
-                Detection(BoundingBox(0, 0, 10, 10), ObjectType.HAIR, 0.9),
+                Detection(BoundingBox(0, 0, 10, 10), "debris", 0.9),
             ],
             processing_time_ms=10.0,
             metadata={},

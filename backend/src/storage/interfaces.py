@@ -37,7 +37,7 @@ class DetectionRecord:
 
     def __post_init__(self):
         if self.created_at is None:
-            self.created_at = datetime.utcnow()
+            self.created_at = datetime.now()
 
 
 @dataclass
@@ -63,7 +63,7 @@ class SessionRecord:
 
     def __post_init__(self):
         if self.start_time is None:
-            self.start_time = datetime.utcnow()
+            self.start_time = datetime.now()
 
 
 class ImageStorage(ABC):
