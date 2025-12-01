@@ -41,14 +41,14 @@ camera:
 vision:
   pipeline:
     steps:
-      # Step 1: Resize image for model input
-      - name: preprocess
-        type: resize
+      # Step 1: Slice image into overlapping tiles
+      - name: tile
+        type: tile
         params:
-          size: [640, 640]
-          keep_aspect: true
+          tile_size: 640
+          overlap: 0.2
       
-      # Step 2: YOLO detection
+      # Step 2: YOLO detection on each tile
       - name: detect
         type: yolo
         params:
@@ -57,13 +57,19 @@ vision:
           iou: 0.45
           device: auto  # auto, cuda, cpu
           half: false
+          batch_size: 4  # Process tiles in batches
       
-      # Step 3: Post-processing NMS
-      - name: postprocess
-        type: nms
+      # Step 3: Merge tile detections back to original coordinates
+      - name: merge
+        type: merge_tiles
         params:
-          iou_threshold: 0.4
-          score_threshold: 0.3
+          iou_threshold: 0.5
+      
+      # Step 4: Post-processing filter
+      - name: postprocess
+        type: filter
+        params:
+          min_confidence: 0.3
 
 # Storage settings
 storage:
