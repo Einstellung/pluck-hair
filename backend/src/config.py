@@ -121,6 +121,7 @@ class SchedulerConfig:
     loop_delay_ms: int = 100
     max_errors: int = 10
     save_annotated: bool = True
+    show_preview: bool = True  # Show real-time OpenCV preview window
     async_storage: bool = True
     storage_workers: int = 4
     max_pending_saves: int = 100

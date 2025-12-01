@@ -9,10 +9,10 @@ app:
 # Use mock camera for development without hardware
 camera:
   type: mock
-  mode: random  # random or directory
+  mode: directory  # random or directory
   width: 640
   height: 480
-  # image_dir: ./test_images  # For directory mode
+  image_dir: ./assets  # Use assets folder with test image
 
 # Use local storage instead of MinIO
 storage:
@@ -38,9 +38,9 @@ vision:
       - name: detect
         type: yolo
         params:
-          model: models/best.pt
+          model: assets/best.pt
           conf: 0.25  # Lower threshold for testing
-          device: cpu
+          device: auto  # Use GPU if available
       - name: merge
         type: merge_tiles
         params:
@@ -49,4 +49,5 @@ vision:
 scheduler:
   loop_delay_ms: 1000  # Slower for debugging
   save_annotated: true
+  show_preview: true  # Show real-time OpenCV preview window
 
