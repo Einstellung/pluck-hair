@@ -1,25 +1,9 @@
 """Vision module data types."""
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-
-
-class ObjectType(str, Enum):
-    """Detection object types.
-    
-    These correspond to the foreign objects detected in bird's nest:
-    - HAIR: Hair strands
-    - BLACK_SPOT: Black spots/debris
-    - YELLOW_SPOT: Yellow spots/discoloration
-    - UNKNOWN: Unclassified objects
-    """
-    HAIR = "hair"
-    BLACK_SPOT = "black_spot"
-    YELLOW_SPOT = "yellow_spot"
-    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -83,17 +67,17 @@ class BoundingBox:
 class Detection:
     """Single detection result.
     
-    Represents one detected foreign object with its location,
+    Represents one detected object with its location,
     classification, and confidence score.
     
     Attributes:
         bbox: Bounding box location.
-        object_type: Classification of the object.
+        object_type: Class name from model labels.
         confidence: Detection confidence score (0-1).
         detection_id: Optional unique identifier.
     """
     bbox: BoundingBox
-    object_type: ObjectType
+    object_type: str
     confidence: float
     detection_id: Optional[str] = None
 
@@ -101,7 +85,7 @@ class Detection:
         """Convert to dictionary for serialization."""
         return {
             "bbox": self.bbox.to_dict(),
-            "object_type": self.object_type.value,
+            "object_type": self.object_type,
             "confidence": self.confidence,
             "detection_id": self.detection_id,
         }
@@ -111,7 +95,7 @@ class Detection:
         """Create from dictionary."""
         return cls(
             bbox=BoundingBox(**data["bbox"]),
-            object_type=ObjectType(data["object_type"]),
+            object_type=data["object_type"],
             confidence=data["confidence"],
             detection_id=data.get("detection_id"),
         )
@@ -165,7 +149,7 @@ class PipelineResult:
         """Number of detections."""
         return len(self.detections)
 
-    def get_detections_by_type(self, object_type: ObjectType) -> List[Detection]:
+    def get_detections_by_type(self, object_type: str) -> List[Detection]:
         """Get detections filtered by type."""
         return [d for d in self.detections if d.object_type == object_type]
 
