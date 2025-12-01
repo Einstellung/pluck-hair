@@ -33,7 +33,7 @@ class SessionModel(Base):
     __tablename__ = "sessions"
 
     id = Column(String(36), primary_key=True)
-    start_time = Column(DateTime, default=datetime.utcnow, nullable=False)
+    start_time = Column(DateTime, default=datetime.now, nullable=False)
     end_time = Column(DateTime, nullable=True)
     total_frames = Column(Integer, default=0)
     total_detections = Column(Integer, default=0)
@@ -81,7 +81,7 @@ class DetectionModel(Base):
     # Timestamps
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=datetime.now,
         nullable=False,
         index=True
     )

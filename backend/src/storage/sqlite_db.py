@@ -102,7 +102,7 @@ class SQLiteDatabase(Database):
                 bbox_y2=record.bbox_y2,
                 object_type=record.object_type,
                 confidence=record.confidence,
-                created_at=record.created_at or datetime.utcnow(),
+                created_at=record.created_at or datetime.now(),
                 session_id=record.session_id,
             )
             
@@ -142,7 +142,7 @@ class SQLiteDatabase(Database):
                     bbox_y2=record.bbox_y2,
                     object_type=record.object_type,
                     confidence=record.confidence,
-                    created_at=record.created_at or datetime.utcnow(),
+                    created_at=record.created_at or datetime.now(),
                     session_id=record.session_id,
                 )
                 db_records.append(db_record)
@@ -270,7 +270,7 @@ class SQLiteDatabase(Database):
             
             db_record = SessionModel(
                 id=session_id,
-                start_time=session_record.start_time or datetime.utcnow(),
+                start_time=session_record.start_time or datetime.now(),
                 end_time=session_record.end_time,
                 total_frames=session_record.total_frames,
                 total_detections=session_record.total_detections,
