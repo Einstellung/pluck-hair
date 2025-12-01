@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from .interfaces import Database, DetectionRecord, SessionRecord
@@ -55,9 +55,13 @@ class SQLiteDatabase(Database):
         if db_path != ":memory:":
             db_dir = Path(db_path).parent
             db_dir.mkdir(parents=True, exist_ok=True)
+            # Use forward slashes for cross-platform compatibility
+            db_path_normalized = Path(db_path).as_posix()
+        else:
+            db_path_normalized = db_path
         
         # SQLite connection string
-        connection_string = f"sqlite:///{db_path}"
+        connection_string = f"sqlite:///{db_path_normalized}"
         
         self.engine = create_engine(
             connection_string,
@@ -252,7 +256,7 @@ class SQLiteDatabase(Database):
         """Health check probe."""
         session = self._get_session()
         try:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         finally:
             session.close()
 
