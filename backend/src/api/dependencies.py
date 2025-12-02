@@ -50,7 +50,11 @@ class AppState:
     @property
     def is_configured(self) -> bool:
         """Check if essential dependencies are configured."""
-        return self.config is not None
+        return (
+            self.config is not None
+            and self.database is not None
+            and self.image_storage is not None
+        )
 
 
 # ============================================================

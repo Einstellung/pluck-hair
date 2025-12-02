@@ -54,7 +54,7 @@ def create_app(
     
     app = FastAPI(
         title=title,
-        description="REST API for Bird's Nest Inspection System (燕窝挑毛系统)",
+        description="REST API for Bird's Nest Inspection System",
         version=version,
         docs_url="/api/docs",
         redoc_url="/api/redoc",

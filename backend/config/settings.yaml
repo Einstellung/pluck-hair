@@ -25,18 +25,30 @@ camera:
   # Manual gain value (optional)
   # gain: 1.0
 
+  # White balance (optional)
+  # Modes: auto, once, manual, off
+  white_balance_mode: once
+  # Manual white balance gains (only used when mode=manual)
+  # white_balance_red: 1.0
+  # white_balance_green: 1.0
+  # white_balance_blue: 1.0
+
+  # Gamma (optional)
+  # gamma_enable: true
+  # gamma_value: 1.0  # range depends on camera, e.g., 0.1~10
+
 # Vision pipeline settings
 vision:
   pipeline:
     steps:
-      # Step 1: Resize image for model input
-      - name: preprocess
-        type: resize
+      # Step 1: Slice image into overlapping tiles
+      - name: tile
+        type: tile
         params:
-          size: [640, 640]
-          keep_aspect: true
+          tile_size: 640
+          overlap: 0.2
       
-      # Step 2: YOLO detection
+      # Step 2: YOLO detection on each tile
       - name: detect
         type: yolo
         params:
@@ -45,13 +57,19 @@ vision:
           iou: 0.45
           device: auto  # auto, cuda, cpu
           half: false
+          batch_size: 4  # Process tiles in batches
       
-      # Step 3: Post-processing NMS
-      - name: postprocess
-        type: nms
+      # Step 3: Merge tile detections back to original coordinates
+      - name: merge
+        type: merge_tiles
         params:
-          iou_threshold: 0.4
-          score_threshold: 0.3
+          iou_threshold: 0.5
+      
+      # Step 4: Post-processing filter
+      - name: postprocess
+        type: filter
+        params:
+          min_confidence: 0.3
 
 # Storage settings
 storage:
@@ -103,5 +121,3 @@ api:
     allow_credentials: true
     allow_methods: ["*"]
     allow_headers: ["*"]
-
-

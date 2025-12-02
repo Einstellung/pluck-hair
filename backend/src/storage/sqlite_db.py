@@ -10,14 +10,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from .interfaces import Database, DetectionRecord, SessionRecord
 from .models import (
     Base,
     DetectionModel,
-    ObjectTypeEnum,
     SessionModel,
     SessionStatusEnum,
 )
@@ -56,9 +55,13 @@ class SQLiteDatabase(Database):
         if db_path != ":memory:":
             db_dir = Path(db_path).parent
             db_dir.mkdir(parents=True, exist_ok=True)
+            # Use forward slashes for cross-platform compatibility
+            db_path_normalized = Path(db_path).as_posix()
+        else:
+            db_path_normalized = db_path
         
         # SQLite connection string
-        connection_string = f"sqlite:///{db_path}"
+        connection_string = f"sqlite:///{db_path_normalized}"
         
         self.engine = create_engine(
             connection_string,
@@ -97,9 +100,9 @@ class SQLiteDatabase(Database):
                 bbox_y1=record.bbox_y1,
                 bbox_x2=record.bbox_x2,
                 bbox_y2=record.bbox_y2,
-                object_type=ObjectTypeEnum(record.object_type),
+                object_type=record.object_type,
                 confidence=record.confidence,
-                created_at=record.created_at or datetime.utcnow(),
+                created_at=record.created_at or datetime.now(),
                 session_id=record.session_id,
             )
             
@@ -137,9 +140,9 @@ class SQLiteDatabase(Database):
                     bbox_y1=record.bbox_y1,
                     bbox_x2=record.bbox_x2,
                     bbox_y2=record.bbox_y2,
-                    object_type=ObjectTypeEnum(record.object_type),
+                    object_type=record.object_type,
                     confidence=record.confidence,
-                    created_at=record.created_at or datetime.utcnow(),
+                    created_at=record.created_at or datetime.now(),
                     session_id=record.session_id,
                 )
                 db_records.append(db_record)
@@ -193,9 +196,7 @@ class SQLiteDatabase(Database):
             if end_time is not None:
                 query = query.filter(DetectionModel.created_at <= end_time)
             if object_type is not None:
-                query = query.filter(
-                    DetectionModel.object_type == ObjectTypeEnum(object_type)
-                )
+                query = query.filter(DetectionModel.object_type == object_type)
             if session_id is not None:
                 query = query.filter(DetectionModel.session_id == session_id)
             
@@ -226,9 +227,7 @@ class SQLiteDatabase(Database):
             if end_time is not None:
                 query = query.filter(DetectionModel.created_at <= end_time)
             if object_type is not None:
-                query = query.filter(
-                    DetectionModel.object_type == ObjectTypeEnum(object_type)
-                )
+                query = query.filter(DetectionModel.object_type == object_type)
             if session_id is not None:
                 query = query.filter(DetectionModel.session_id == session_id)
             
@@ -257,7 +256,7 @@ class SQLiteDatabase(Database):
         """Health check probe."""
         session = self._get_session()
         try:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         finally:
             session.close()
 
@@ -271,7 +270,7 @@ class SQLiteDatabase(Database):
             
             db_record = SessionModel(
                 id=session_id,
-                start_time=session_record.start_time or datetime.utcnow(),
+                start_time=session_record.start_time or datetime.now(),
                 end_time=session_record.end_time,
                 total_frames=session_record.total_frames,
                 total_detections=session_record.total_detections,
@@ -351,7 +350,7 @@ class SQLiteDatabase(Database):
             bbox_y1=model.bbox_y1,
             bbox_x2=model.bbox_x2,
             bbox_y2=model.bbox_y2,
-            object_type=model.object_type.value,
+            object_type=model.object_type,
             confidence=model.confidence,
             created_at=model.created_at,
             session_id=model.session_id,

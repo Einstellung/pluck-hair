@@ -22,84 +22,66 @@ class TestVisionTypes:
 
     def test_detection(self):
         """Test Detection creation and serialization."""
-        from src.core.vision.types import BoundingBox, Detection, ObjectType
+        from src.core.vision.types import BoundingBox, Detection
         
         det = Detection(
             bbox=BoundingBox(x1=10, y1=20, x2=30, y2=40),
-            object_type=ObjectType.HAIR,
+            object_type="debris",
             confidence=0.95,
         )
         
-        assert det.object_type == ObjectType.HAIR
+        assert det.object_type == "debris"
         assert det.confidence == 0.95
         
         d = det.to_dict()
-        assert d["object_type"] == "hair"
+        assert d["object_type"] == "debris"
         assert d["confidence"] == 0.95
         assert d["bbox"]["x1"] == 10
-
-    def test_object_type_enum(self):
-        """Test ObjectType enum values."""
-        from src.core.vision.types import ObjectType
-        
-        assert ObjectType.HAIR.value == "hair"
-        assert ObjectType.BLACK_SPOT.value == "black_spot"
-        assert ObjectType.YELLOW_SPOT.value == "yellow_spot"
-        assert ObjectType.UNKNOWN.value == "unknown"
 
 
 class TestPipelineSteps:
     """Tests for pipeline steps."""
 
-    def test_resize_step(self, sample_image):
-        """Test ResizeStep."""
-        from src.core.vision.steps import ResizeStep
+    def test_tile_step(self):
+        """Test TileStep slices image into tiles."""
+        from src.core.vision.steps import TileStep
         from src.core.vision.types import PipelineContext
         
-        step = ResizeStep({"size": [320, 240]})
-        ctx = PipelineContext(original_image=sample_image)
+        # Create a 1000x800 image
+        image = np.zeros((800, 1000, 3), dtype=np.uint8)
+        step = TileStep({"tile_size": 640, "overlap": 0.2})
+        ctx = PipelineContext(original_image=image)
         
         result = step.process(ctx)
         
-        assert result.processed_image.shape[0] == 240
-        assert result.processed_image.shape[1] == 320
-        assert "resize_scale" in result.metadata
-
-    def test_resize_keep_aspect(self, sample_image):
-        """Test ResizeStep with aspect ratio preservation."""
-        from src.core.vision.steps import ResizeStep
-        from src.core.vision.types import PipelineContext
-        
-        step = ResizeStep({"size": [640, 640], "keep_aspect": True})
-        ctx = PipelineContext(original_image=sample_image)
-        
-        result = step.process(ctx)
-        
-        # Should be padded to 640x640
-        assert result.processed_image.shape == (640, 640, 3)
-        assert "resize_padding" in result.metadata
+        assert "tiles" in result.metadata
+        assert result.metadata["tile_count"] > 0
+        tiles = result.metadata["tiles"]
+        assert len(tiles) >= 2
+        for tile in tiles:
+            assert tile.image.shape == (640, 640, 3)
 
     def test_nms_step(self):
         """Test NMSStep removes overlapping detections."""
         from src.core.vision.steps import NMSStep
         from src.core.vision.types import (
-            BoundingBox, Detection, ObjectType, PipelineContext
+            BoundingBox, Detection, PipelineContext
         )
         
         # Create overlapping detections
         det1 = Detection(
             bbox=BoundingBox(x1=10, y1=10, x2=50, y2=50),
-            object_type=ObjectType.HAIR,
+            object_type="debris",
             confidence=0.9,
         )
         det2 = Detection(
             bbox=BoundingBox(x1=15, y1=15, x2=55, y2=55),  # High overlap with det1
-            object_type=ObjectType.HAIR,
+            object_type="debris",
             confidence=0.8,
         )
         det3 = Detection(
             bbox=BoundingBox(x1=100, y1=100, x2=150, y2=150),  # No overlap
-            object_type=ObjectType.BLACK_SPOT,
+            object_type="debris",
             confidence=0.7,
         )
         
@@ -130,17 +112,17 @@ class TestPipeline:
         assert result.detections == []
         assert result.processing_time_ms >= 0
 
-    def test_pipeline_with_resize(self, sample_image):
-        """Test pipeline with resize step."""
+    def test_pipeline_with_tile(self, sample_image):
+        """Test pipeline with tile step."""
         from src.core.vision.pipeline import VisionPipeline
-        from src.core.vision.steps import ResizeStep
+        from src.core.vision.steps import TileStep
         
         pipeline = VisionPipeline()
-        pipeline.add_step(ResizeStep({"size": [320, 240]}))
+        pipeline.add_step(TileStep({"tile_size": 320, "overlap": 0.2}))
         
         result = pipeline.run(sample_image)
         
-        assert "resize" in pipeline.step_names or "ResizeStep" in pipeline.step_names
+        assert "tile" in pipeline.step_names
         assert result.processing_time_ms >= 0
 
     def test_pipeline_from_config(self):
@@ -150,7 +132,7 @@ class TestPipeline:
         config = {
             "pipeline": {
                 "steps": [
-                    {"type": "resize", "params": {"size": [640, 640]}},
+                    {"type": "tile", "params": {"tile_size": 640}},
                     {"type": "nms", "params": {"iou_threshold": 0.4}},
                 ]
             }
@@ -173,11 +155,10 @@ class TestPipeline:
         
         steps = list_available_steps()
         
-        assert "resize" in steps
+        assert "tile" in steps
+        assert "merge_tiles" in steps
         assert "yolo" in steps
         assert "nms" in steps
         assert "filter" in steps
-        assert "normalize" in steps
-        assert "enhance" in steps
 
 

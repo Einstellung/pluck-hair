@@ -1,15 +1,14 @@
 from .base import ProcessStep
-from .preprocess import ResizeStep, NormalizeStep, EnhanceStep
+from .tiling import TileStep, MergeTilesStep
 from .yolo_detect import YOLODetectStep
 from .postprocess import NMSStep, FilterStep, SortStep
 
 # Step registry for config-based creation
 # All implemented steps should be registered here
 _STEP_REGISTRY = {
-    # Preprocessing steps
-    "resize": ResizeStep,
-    "normalize": NormalizeStep,
-    "enhance": EnhanceStep,
+    # Tiling steps (for sliced inference on large images)
+    "tile": TileStep,
+    "merge_tiles": MergeTilesStep,
     # Detection steps
     "yolo": YOLODetectStep,
     # Postprocessing steps
@@ -78,10 +77,9 @@ def list_available_steps() -> list:
 __all__ = [
     # Base
     "ProcessStep",
-    # Preprocessing
-    "ResizeStep",
-    "NormalizeStep",
-    "EnhanceStep",
+    # Tiling (sliced inference)
+    "TileStep",
+    "MergeTilesStep",
     # Detection
     "YOLODetectStep",
     # Postprocessing

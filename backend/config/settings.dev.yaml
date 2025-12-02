@@ -8,11 +8,14 @@ app:
 
 # Use mock camera for development without hardware
 camera:
-  type: mock
-  mode: random  # random or directory
-  width: 640
-  height: 480
-  # image_dir: ./test_images  # For directory mode
+  # type: mock
+  # mode: directory  # random or directory
+  # width: 640
+  # height: 480
+  # image_dir: ./assets 
+  type: daheng
+  device_index: 1
+  exposure_time: 60000  # Exposure time in microseconds
 
 # Use local storage instead of MinIO
 storage:
@@ -26,22 +29,28 @@ storage:
     path: ./data/pluck_dev.db
     echo: false
 
-# Lower thresholds for testing
+# Tile-based detection pipeline
 vision:
   pipeline:
     steps:
-      - name: preprocess
-        type: resize
+      - name: tile
+        type: tile
         params:
-          size: [640, 640]
+          tile_size: 640
+          overlap: 0.2
       - name: detect
         type: yolo
         params:
-          model: models/best.pt
+          model: assets/best.pt
           conf: 0.25  # Lower threshold for testing
-          device: cpu
+          device: auto  # Use GPU if available
+      - name: merge
+        type: merge_tiles
+        params:
+          iou_threshold: 0.5
 
 scheduler:
-  loop_delay_ms: 1000  # Slower for debugging
+  loop_delay_ms: 10  # Slower for debugging
   save_annotated: true
+  show_preview: true  # Show real-time OpenCV preview window
 

@@ -49,7 +49,7 @@
 |------|------|--------|
 | **相机采集** | 支持大恒工业相机 (USB3.1, gxipy SDK) | P0 |
 | | 支持配置曝光、增益等参数 | P1 |
-| **异物检测** | 检测毛发、黑点、黄点三类异物 | P0 |
+| **异物检测** | 检测燕窝表面异物 (debris) | P0 |
 | | 输出位置、类别、置信度 | P0 |
 | | 支持 Pipeline 多步骤处理 | P1 |
 | **数据存储** | 存储原始图像 (MinIO) | P0 |
@@ -249,9 +249,8 @@ camera:
 
 | 类型 | 字段 | 说明 |
 |------|------|------|
-| `ObjectType` | HAIR, BLACK_SPOT, YELLOW_SPOT | 异物类别枚举 |
 | `BoundingBox` | x1, y1, x2, y2 | 边界框（像素坐标） |
-| `Detection` | bbox, object_type, confidence | 单个检测结果 |
+| `Detection` | bbox, object_type, confidence | 单个检测结果，object_type 为字符串（如 "debris"） |
 | `PipelineContext` | original_image, processed_image, detections, metadata | 步骤间传递的上下文 |
 | `PipelineResult` | detections, processing_time_ms, metadata | Pipeline 最终输出 |
 

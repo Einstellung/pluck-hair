@@ -8,25 +8,21 @@ dependencies = [
     # Core
     "numpy>=1.24.0",
     "opencv-python>=4.8.0",
-    
     # Deep Learning
     "ultralytics>=8.0.0",
     "torch>=2.0.0",
-    
     # Database
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
-    
     # Object Storage
     "minio>=7.1.0",
-    
     # API
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
     "pydantic>=2.0.0",
-    
     # Config
     "pyyaml>=6.0",
+    "iai-gxipy>=2.0.2407.9061",
 ]
 
 [project.optional-dependencies]

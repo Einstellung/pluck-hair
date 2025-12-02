@@ -67,7 +67,7 @@ async def health_check(state: AppState = Depends(get_app_state)):
     version = state.config.app.version if state.config else "0.1.0"
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(),
         version=version,
     )
 
@@ -81,7 +81,7 @@ async def liveness_check():
     """
     return LivenessResponse(
         alive=True,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(),
     )
 
 

@@ -31,6 +31,12 @@ class CameraConfig:
     gain_auto: bool = False
     exposure_time: Optional[float] = None
     gain: Optional[float] = None
+    white_balance_mode: str = "once"  # auto, once, manual, off
+    white_balance_red: Optional[float] = None
+    white_balance_green: Optional[float] = None
+    white_balance_blue: Optional[float] = None
+    gamma_enable: bool = False
+    gamma_value: Optional[float] = None
     # For mock camera
     mode: str = "random"
     image_dir: Optional[str] = None
@@ -115,6 +121,7 @@ class SchedulerConfig:
     loop_delay_ms: int = 100
     max_errors: int = 10
     save_annotated: bool = True
+    show_preview: bool = True  # Show real-time OpenCV preview window
     async_storage: bool = True
     storage_workers: int = 4
     max_pending_saves: int = 100
@@ -247,15 +254,21 @@ class AppConfig:
             "camera": {
                 "type": self.camera.type,
                 "device_index": self.camera.device_index,
-                "exposure_auto": self.camera.exposure_auto,
-                "gain_auto": self.camera.gain_auto,
-                "exposure_time": self.camera.exposure_time,
-                "gain": self.camera.gain,
-                "mode": self.camera.mode,
-                "image_dir": self.camera.image_dir,
-                "width": self.camera.width,
-                "height": self.camera.height,
-            },
+            "exposure_auto": self.camera.exposure_auto,
+            "gain_auto": self.camera.gain_auto,
+            "exposure_time": self.camera.exposure_time,
+            "gain": self.camera.gain,
+            "white_balance_mode": self.camera.white_balance_mode,
+            "white_balance_red": self.camera.white_balance_red,
+            "white_balance_green": self.camera.white_balance_green,
+            "white_balance_blue": self.camera.white_balance_blue,
+            "gamma_enable": self.camera.gamma_enable,
+            "gamma_value": self.camera.gamma_value,
+            "mode": self.camera.mode,
+            "image_dir": self.camera.image_dir,
+            "width": self.camera.width,
+            "height": self.camera.height,
+        },
             "vision": {
                 "pipeline": {
                     "steps": [

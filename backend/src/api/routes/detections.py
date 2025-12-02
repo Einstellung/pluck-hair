@@ -1,7 +1,7 @@
 """Detection-related API endpoints.
 
 These endpoints provide access to detection records stored in the database.
-All business logic is delegated to DetectionService.
+All logic is delegated to DetectionService.
 """
 
 from datetime import datetime

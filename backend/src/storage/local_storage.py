@@ -181,7 +181,8 @@ class LocalStorage(ImageStorage):
         for path in search_path.rglob("*"):
             if path.is_file():
                 relative = path.relative_to(self.base_path)
-                files.append(str(relative))
+                # Use as_posix() to ensure consistent forward slashes on all platforms
+                files.append(relative.as_posix())
         
         return sorted(files)
 

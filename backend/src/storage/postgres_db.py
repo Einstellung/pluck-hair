@@ -12,7 +12,6 @@ from .interfaces import Database, DetectionRecord, SessionRecord
 from .models import (
     Base,
     DetectionModel,
-    ObjectTypeEnum,
     SessionModel,
     SessionStatusEnum,
 )
@@ -89,7 +88,7 @@ class PostgresDatabase(Database):
                 bbox_y1=record.bbox_y1,
                 bbox_x2=record.bbox_x2,
                 bbox_y2=record.bbox_y2,
-                object_type=ObjectTypeEnum(record.object_type),
+                object_type=record.object_type,
                 confidence=record.confidence,
                 created_at=record.created_at or datetime.utcnow(),
                 session_id=record.session_id,
@@ -129,7 +128,7 @@ class PostgresDatabase(Database):
                     bbox_y1=record.bbox_y1,
                     bbox_x2=record.bbox_x2,
                     bbox_y2=record.bbox_y2,
-                    object_type=ObjectTypeEnum(record.object_type),
+                    object_type=record.object_type,
                     confidence=record.confidence,
                     created_at=record.created_at or datetime.utcnow(),
                     session_id=record.session_id,
@@ -185,9 +184,7 @@ class PostgresDatabase(Database):
             if end_time is not None:
                 query = query.filter(DetectionModel.created_at <= end_time)
             if object_type is not None:
-                query = query.filter(
-                    DetectionModel.object_type == ObjectTypeEnum(object_type)
-                )
+                query = query.filter(DetectionModel.object_type == object_type)
             if session_id is not None:
                 query = query.filter(DetectionModel.session_id == session_id)
             
@@ -218,9 +215,7 @@ class PostgresDatabase(Database):
             if end_time is not None:
                 query = query.filter(DetectionModel.created_at <= end_time)
             if object_type is not None:
-                query = query.filter(
-                    DetectionModel.object_type == ObjectTypeEnum(object_type)
-                )
+                query = query.filter(DetectionModel.object_type == object_type)
             if session_id is not None:
                 query = query.filter(DetectionModel.session_id == session_id)
             
@@ -343,7 +338,7 @@ class PostgresDatabase(Database):
             bbox_y1=model.bbox_y1,
             bbox_x2=model.bbox_x2,
             bbox_y2=model.bbox_y2,
-            object_type=model.object_type.value,
+            object_type=model.object_type,
             confidence=model.confidence,
             created_at=model.created_at,
             session_id=model.session_id,

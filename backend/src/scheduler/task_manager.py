@@ -30,6 +30,7 @@ class TaskManagerConfig:
         loop_delay_ms: Delay between frames in milliseconds.
         max_errors: Maximum consecutive errors before stopping.
         save_annotated: Whether to save annotated images.
+        show_preview: Show real-time preview window with OpenCV.
         async_storage: Use async storage with thread pool.
         storage_workers: Number of storage worker threads.
         max_pending_saves: Max pending save operations before blocking.
@@ -39,15 +40,16 @@ class TaskManagerConfig:
     loop_delay_ms: int = 100
     max_errors: int = 10
     save_annotated: bool = True
+    show_preview: bool = True  # Show real-time detection preview
     async_storage: bool = True
     storage_workers: int = 4
     max_pending_saves: int = 100
     storage_retry_count: int = 3
     annotation_color_map: dict = field(default_factory=lambda: {
-        "hair": (0, 255, 0),        # Green
+        "hair": (255, 0, 0),        # Blue (BGR
         "black_spot": (0, 0, 255),  # Red
         "yellow_spot": (0, 255, 255),  # Yellow
-        "unknown": (128, 128, 128),  # Gray
+        "unknown": (255, 0, 0),  # Blue (BGR
     })
 
 
@@ -254,6 +256,30 @@ class TaskManager:
             f"{result.processing_time_ms:.1f}ms processing"
         )
         
+        # 2.5 Real-time preview with OpenCV (if enabled)
+        if self.config.show_preview:
+            if result.detections:
+                preview_image = self._draw_detections(image, result.detections)
+            else:
+                preview_image = image.copy()
+            
+            # Resize for display if image is too large
+            max_display_width = 1280
+            h, w = preview_image.shape[:2]
+            if w > max_display_width:
+                scale = max_display_width / w
+                preview_image = cv2.resize(
+                    preview_image,
+                    (int(w * scale), int(h * scale))
+                )
+            
+            cv2.imshow("Detection Preview", preview_image)
+            key = cv2.waitKey(1) & 0xFF
+            # Press 'q' to quit
+            if key == ord('q'):
+                logger.info("User pressed 'q', stopping...")
+                self.stop()
+        
         # 3. Generate image path
         date_path = timestamp.strftime("%Y/%m/%d")
         time_str = timestamp.strftime("%H%M%S_%f")[:-3]  # HHMMSSmmm
@@ -425,6 +451,8 @@ class TaskManager:
         timestamp: datetime,
     ) -> DetectionRecord:
         """Convert Detection to DetectionRecord."""
+        # object_type is a string, not an enum
+        obj_type = detection.object_type if isinstance(detection.object_type, str) else detection.object_type.value
         return DetectionRecord(
             id=str(uuid.uuid4()),
             image_path=image_path,
@@ -432,7 +460,7 @@ class TaskManager:
             bbox_y1=detection.bbox.y1,
             bbox_x2=detection.bbox.x2,
             bbox_y2=detection.bbox.y2,
-            object_type=detection.object_type.value,
+            object_type=obj_type,
             confidence=detection.confidence,
             created_at=timestamp,
             session_id=self._session_id,
@@ -455,9 +483,11 @@ class TaskManager:
         result = image.copy()
         
         for det in detections:
+            # object_type is a string, not an enum
+            obj_type = det.object_type if isinstance(det.object_type, str) else det.object_type.value
             color = self.config.annotation_color_map.get(
-                det.object_type.value,
-                (128, 128, 128)
+                obj_type,
+                (255, 0, 0)
             )
             
             # Draw bounding box
@@ -466,7 +496,7 @@ class TaskManager:
             cv2.rectangle(result, pt1, pt2, color, 2)
             
             # Draw label
-            label = f"{det.object_type.value}: {det.confidence:.2f}"
+            label = f"{obj_type}: {det.confidence:.2f}"
             label_size, _ = cv2.getTextSize(
                 label,
                 cv2.FONT_HERSHEY_SIMPLEX,
@@ -510,6 +540,10 @@ class TaskManager:
     def _cleanup(self):
         """Cleanup resources and finalize session."""
         logger.info("Cleaning up TaskManager...")
+        
+        # Close OpenCV windows if preview was enabled
+        if self.config.show_preview:
+            cv2.destroyAllWindows()
         
         # Close camera
         try:
