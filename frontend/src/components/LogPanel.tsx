@@ -12,7 +12,7 @@ export function LogPanel({ logs }: LogPanelProps) {
         <p className="text-sm font-semibold text-text">日志</p>
         <p className="text-xs text-muted">最近 {logs.length} 条</p>
       </div>
-      <div className="mt-3 h-48 overflow-y-auto rounded-md bg-black/20 px-3 py-2">
+      <div className="mt-3 h-48 overflow-y-auto rounded-md bg-muted/10 px-3 py-2">
         {logs.length === 0 ? (
           <p className="text-sm text-muted">暂无日志</p>
         ) : (

@@ -15,7 +15,7 @@ export interface RobotSettings {
   camera: {
     exposureUs: number;
     gainDb: number;
-    whiteBalanceMode: "auto" | "manual";
+    whiteBalanceMode: "auto" | "once";
   };
   detection: {
     confidenceThreshold: number;

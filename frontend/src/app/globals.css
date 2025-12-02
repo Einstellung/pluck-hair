@@ -3,17 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0f172a;
-  --panel: #1f2937;
-  --border: #243047;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --border: #e5e7eb;
+  --text: #0f172a;
+  --muted: #6b7280;
   --accent: #16a34a;
   --danger: #dc2626;
-}
-
-* {
-  color-scheme: dark;
 }
 
 body {
@@ -25,7 +21,7 @@ body {
 }
 
 ::selection {
-  background: rgba(22, 163, 74, 0.35);
+  background: rgba(22, 163, 74, 0.15);
 }
 
 @layer utilities {

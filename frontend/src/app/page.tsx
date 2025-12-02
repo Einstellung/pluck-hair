@@ -101,7 +101,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg border border-border bg-black/20 px-3 py-2 text-sm text-muted">
+            <div className="rounded-lg border border-border bg-muted/10 px-3 py-2 text-sm text-muted">
               实时监控 · 工业模式
             </div>
             <Link

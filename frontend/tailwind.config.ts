@@ -9,13 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        surface: "#0f172a",
-        panel: "#1f2937",
-        border: "#243047",
+        surface: "#f5f7fb",
+        panel: "#ffffff",
+        border: "#e5e7eb",
         accent: "#16a34a",
         danger: "#dc2626",
-        text: "#e5e7eb",
-        muted: "#9ca3af",
+        text: "#0f172a",
+        muted: "#6b7280",
       },
       borderRadius: {
         lg: "14px",
@@ -23,7 +23,7 @@ const config: Config = {
         sm: "8px",
       },
       boxShadow: {
-        panel: "0 10px 40px rgba(0,0,0,0.25)",
+        panel: "0 12px 40px rgba(15, 23, 42, 0.12)",
       },
       fontFamily: {
         sans: [
