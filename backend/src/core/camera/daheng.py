@@ -3,11 +3,16 @@
 import logging
 from typing import Optional, Tuple
 
+import cv2
 import numpy as np
 
 from .base import CameraBase, CameraConfig
 
 logger = logging.getLogger(__name__)
+
+# Pixel format check constants (from gxipy SDK)
+GX_PIXEL_8BIT = 0x00080000
+PIXEL_BIT_MASK = 0x00ff0000
 
 
 class DahengCamera(CameraBase):
@@ -203,7 +208,7 @@ class DahengCamera(CameraBase):
         """Capture a single frame.
         
         Returns:
-            Image as numpy array (H, W, C) or (H, W) for mono.
+            Image as numpy array (H, W, C) in BGR format for OpenCV compatibility.
             
         Raises:
             RuntimeError: If camera not opened or capture fails.
@@ -211,14 +216,40 @@ class DahengCamera(CameraBase):
         if not self._is_opened:
             raise RuntimeError("Camera not opened")
         
-        # Get image from data stream
+        # Get raw image from data stream
         raw_image = self._cam.data_stream[0].get_image()
         
         if raw_image is None:
             raise RuntimeError("Failed to capture image")
         
-        # Convert to numpy array
-        image = raw_image.get_numpy_array()
+        # Check frame status
+        gx = self._gx
+        if raw_image.get_status() != gx.GxFrameStatusList.SUCCESS:
+            raise RuntimeError("Frame capture failed: incomplete frame")
+        
+        # Get pixel format to determine conversion needs
+        pixel_format = raw_image.get_pixel_format()
+        
+        # Check if already BGR8 (no conversion needed)
+        if pixel_format == gx.GxPixelFormatEntry.BGR8:
+            image = raw_image.get_numpy_array()
+        # Check if already RGB8 (just need channel swap)
+        elif pixel_format == gx.GxPixelFormatEntry.RGB8:
+            rgb_image = raw_image.get_numpy_array()
+            image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+        # Check if it's 8-bit format (Bayer or Mono)
+        elif (pixel_format & PIXEL_BIT_MASK) == GX_PIXEL_8BIT:
+            # Convert Bayer/Raw to BGR using SDK
+            rgb_image = raw_image.convert("RGB", channel_order=gx.DxRGBChannelOrder.ORDER_BGR)
+            if rgb_image is None:
+                raise RuntimeError("Failed to convert raw image to BGR")
+            image = rgb_image.get_numpy_array()
+        else:
+            # For other formats (10/12/16 bit), convert to RGB first
+            rgb_image = raw_image.convert("RGB", channel_order=gx.DxRGBChannelOrder.ORDER_BGR)
+            if rgb_image is None:
+                raise RuntimeError("Failed to convert raw image to BGR")
+            image = rgb_image.get_numpy_array()
         
         if image is None:
             raise RuntimeError("Failed to convert image to numpy array")
