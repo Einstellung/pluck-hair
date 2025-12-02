@@ -12,19 +12,10 @@ export interface RobotStats {
 }
 
 export interface RobotSettings {
-  camera: {
-    exposureUs: number;
-    gainDb: number;
-    whiteBalanceMode: "auto" | "once";
-  };
   detection: {
     confidenceThreshold: number;
     minSizePx: number;
     maxSizePx: number;
-  };
-  system: {
-    logLevel: "info" | "debug";
-    imageSavePath: string;
   };
 }
 
@@ -56,19 +47,10 @@ export const defaultStats: RobotStats = {
 };
 
 export const defaultSettings: RobotSettings = {
-  camera: {
-    exposureUs: 7000,
-    gainDb: 12,
-    whiteBalanceMode: "auto",
-  },
   detection: {
     confidenceThreshold: 0.5,
     minSizePx: 24,
     maxSizePx: 240,
-  },
-  system: {
-    logLevel: "info",
-    imageSavePath: "/var/log/pluck/images",
   },
 };
 
@@ -104,9 +86,7 @@ export function loadSettingsFromStorage(): RobotSettings | null {
   try {
     const parsed = JSON.parse(raw) as RobotSettings;
     return {
-      camera: { ...defaultSettings.camera, ...parsed.camera },
       detection: { ...defaultSettings.detection, ...parsed.detection },
-      system: { ...defaultSettings.system, ...parsed.system },
     };
   } catch (error) {
     console.warn("Failed to parse stored settings", error);
