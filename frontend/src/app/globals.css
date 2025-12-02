@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0f172a;
+  --panel: #1f2937;
+  --border: #243047;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #16a34a;
+  --danger: #dc2626;
+}
+
+* {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial,
+    sans-serif;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(22, 163, 74, 0.35);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
