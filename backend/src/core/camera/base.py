@@ -17,12 +17,7 @@ class CameraConfig:
         gain_auto: Enable auto gain.
         exposure_time: Manual exposure time in microseconds.
         gain: Manual gain value.
-        white_balance_mode: White balance mode ("auto", "once", "manual", "off").
-        white_balance_red: Manual white balance red gain.
-        white_balance_green: Manual white balance green gain.
-        white_balance_blue: Manual white balance blue gain.
-        gamma_enable: Enable gamma correction.
-        gamma_value: Gamma parameter (camera-specific range).
+        white_balance_mode: White balance mode ("auto", "once", "off").
     """
     device_index: int = 1
     exposure_auto: bool = False
@@ -30,11 +25,6 @@ class CameraConfig:
     exposure_time: Optional[float] = None
     gain: Optional[float] = None
     white_balance_mode: str = "once"
-    white_balance_red: Optional[float] = None
-    white_balance_green: Optional[float] = None
-    white_balance_blue: Optional[float] = None
-    gamma_enable: bool = False
-    gamma_value: Optional[float] = None
 
 
 class CameraBase(ABC):
