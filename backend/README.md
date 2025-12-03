@@ -35,7 +35,7 @@ pip install -e ".[dev]"
 ### 3. Start Services
 
 ```bash
-# Start MinIO and PostgreSQL
+# Start MinIO, PostgreSQL, Redis
 docker-compose up -d
 
 # Wait for services to be ready
@@ -45,12 +45,18 @@ docker-compose ps
 ### 4. Run the System
 
 ```bash
-# Run detection loop
+# Run detection loop (publishes detection events to Redis Streams)
 python main.py --config config/settings.yaml --mode run
 
-# Or run API server only
+# Or run API server only (consumes Redis Streams, serves REST + WebSocket)
 python main.py --config config/settings.yaml --mode api
 ```
+
+### Real-time events
+
+- Detection process publishes events to Redis Streams `pluck:detections` (configurable).
+- API consumes the stream and broadcasts to WebSocket clients at `/api/ws/events`.
+- Settings live under `redis` in `config/settings.yaml` (enable/disable, stream name, maxlen, etc.).
 
 ## Project Structure
 
@@ -95,5 +101,4 @@ See [docs/backend-design.md](../docs/backend-design.md) for detailed design docu
 ## License
 
 Proprietary - All rights reserved.
-
 

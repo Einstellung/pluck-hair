@@ -129,6 +129,19 @@ class SchedulerConfig:
 
 
 @dataclass
+class RedisConfig:
+    """Redis settings for inter-process messaging."""
+    url: str = "redis://localhost:6379/0"
+    stream: str = "pluck:detections"
+    consumer_group: str = "api"
+    consumer_name: str = "api-1"
+    maxlen: int = 10000
+    read_count: int = 10
+    block_ms: int = 5000
+    enabled: bool = True # wether to enable Redis Streams
+
+
+@dataclass
 class CorsConfig:
     """CORS configuration."""
     allow_origins: List[str] = field(default_factory=lambda: ["*"])
@@ -181,6 +194,7 @@ class AppConfig:
     storage: StorageConfig = field(default_factory=StorageConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
+    redis: RedisConfig = field(default_factory=RedisConfig)
     
     # Path to the config file (for reference/logging)
     _config_path: Optional[str] = field(default=None, repr=False)
@@ -202,6 +216,7 @@ class AppConfig:
         storage_data = data.get("storage", {})
         scheduler_data = data.get("scheduler", {})
         api_data = data.get("api", {})
+        redis_data = data.get("redis", {})
         
         return cls(
             app=AppSettings(**app_data),
@@ -210,6 +225,7 @@ class AppConfig:
             storage=StorageConfig.from_dict(storage_data),
             scheduler=SchedulerConfig(**scheduler_data),
             api=ApiConfig.from_dict(api_data),
+            redis=RedisConfig(**redis_data),
             _config_path=config_path,
         )
 
@@ -313,6 +329,16 @@ class AppConfig:
                     "allow_methods": self.api.cors.allow_methods,
                     "allow_headers": self.api.cors.allow_headers,
                 },
+            },
+            "redis": {
+                "url": self.redis.url,
+                "stream": self.redis.stream,
+                "consumer_group": self.redis.consumer_group,
+                "consumer_name": self.redis.consumer_name,
+                "maxlen": self.redis.maxlen,
+                "read_count": self.redis.read_count,
+                "block_ms": self.redis.block_ms,
+                "enabled": self.redis.enabled,
             },
         }
 

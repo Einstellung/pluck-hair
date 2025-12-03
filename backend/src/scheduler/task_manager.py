@@ -9,7 +9,7 @@ import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Protocol
 
 import cv2
 import numpy as np
@@ -53,6 +53,13 @@ class TaskManagerConfig:
     })
 
 
+class DetectionEventPublisher(Protocol):
+    """Protocol for publishing detection events."""
+
+    def publish(self, payload: dict) -> None:
+        ...
+
+
 class TaskManager:
     """Main loop scheduler for the detection system.
     
@@ -84,6 +91,7 @@ class TaskManager:
         image_storage: ImageStorage,
         database: Database,
         config: Optional[TaskManagerConfig] = None,
+        event_publisher: Optional[DetectionEventPublisher] = None,
         register_signals: bool = True,
     ):
         """Initialize TaskManager.
@@ -94,12 +102,14 @@ class TaskManager:
             image_storage: Storage for images.
             database: Database for detection records.
             config: Optional configuration.
+            event_publisher: Optional publisher for detection events.
         """
         self.camera = camera
         self.pipeline = pipeline
         self.image_storage = image_storage
         self.database = database
         self.config = config or TaskManagerConfig()
+        self.event_publisher = event_publisher
         
         # State
         self._running = False
@@ -314,6 +324,46 @@ class TaskManager:
         # 7. Clean up completed futures
         self._cleanup_futures()
 
+    def _publish_event(
+        self,
+        records: List[DetectionRecord],
+        image_path: str,
+        annotated_path: Optional[str],
+        timestamp: datetime,
+    ):
+        """Publish detection event to external subscribers (if configured)."""
+        if not self.event_publisher or not records:
+            return
+
+        payload = {
+            "type": "detection",
+            "session_id": self._session_id,
+            "frame": self._frame_count,
+            "total_detections": self._total_detections,
+            "timestamp": timestamp.isoformat() + "Z",
+            "image_path": image_path,
+            "annotated_path": annotated_path,
+            "detections": [
+                {
+                    "id": record.id,
+                    "object_type": record.object_type,
+                    "confidence": record.confidence,
+                    "bbox": {
+                        "x1": record.bbox_x1,
+                        "y1": record.bbox_y1,
+                        "x2": record.bbox_x2,
+                        "y2": record.bbox_y2,
+                    },
+                }
+                for record in records
+            ],
+        }
+
+        try:
+            self.event_publisher.publish(payload)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to publish detection event: %s", exc)
+
     def _save_sync(
         self,
         image: np.ndarray,
@@ -334,6 +384,7 @@ class TaskManager:
                 for det in detections
             ]
             self.database.save_detections_batch(records)
+            self._publish_event(records, full_path, annotated_path, timestamp)
         
         # Save annotated image
         if annotated_image is not None and annotated_path:
@@ -402,6 +453,7 @@ class TaskManager:
                         for det in detections
                     ]
                     self.database.save_detections_batch(records)
+                    self._publish_event(records, full_path, annotated_path, timestamp)
                 
                 # Save annotated image
                 if annotated_image is not None and annotated_path:
@@ -597,4 +649,3 @@ class TaskManager:
                 f"  Storage errors: {self._storage_errors}\n"
                 f"  FPS: {fps_str}"
             )
-

@@ -110,6 +110,17 @@ scheduler:
   # Save annotated images with detection boxes
   save_annotated: true
 
+# Redis (for real-time event streaming)
+redis:
+  url: "redis://localhost:6379/0"
+  stream: "pluck:detections"
+  consumer_group: "api"
+  consumer_name: "api-1"
+  maxlen: 10000
+  read_count: 10
+  block_ms: 5000
+  enabled: true
+
 # API settings (for API server mode)
 api:
   host: "0.0.0.0"

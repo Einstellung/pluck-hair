@@ -151,6 +151,20 @@ def run_detection_loop(config: AppConfig):
     camera = create_camera(config)
     pipeline = create_pipeline(config)
     image_storage, database = create_storage(config)
+
+    # Optional Redis publisher for real-time events
+    event_publisher = None
+    if getattr(config, "redis", None) and config.redis.enabled:
+        try:
+            from src.events.redis_streams import RedisStreamPublisher
+            event_publisher = RedisStreamPublisher(
+                url=config.redis.url,
+                stream=config.redis.stream,
+                maxlen=config.redis.maxlen,
+            )
+            logger.info("Redis Streams publisher enabled for stream %s", config.redis.stream)
+        except Exception as e:
+            logger.warning(f"Failed to initialize Redis publisher: {e}")
     
     # Create task manager
     from src.scheduler.task_manager import TaskManager, TaskManagerConfig
@@ -173,6 +187,7 @@ def run_detection_loop(config: AppConfig):
         image_storage=image_storage,
         database=database,
         config=task_config,
+        event_publisher=event_publisher,
     )
     
     logger.info("Starting detection loop...")

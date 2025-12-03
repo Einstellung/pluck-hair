@@ -44,10 +44,23 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Redis for inter-process messaging
+  redis:
+    image: redis:7
+    container_name: pluck-redis
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     name: pluck-postgres-data
   minio_data:
     name: pluck-minio-data
-
 
