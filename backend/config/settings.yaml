@@ -106,6 +106,9 @@ scheduler:
   
   # Maximum consecutive errors before stopping
   max_errors: 10
+
+  # Save raw images and detection records
+  save_images: true
   
   # Save annotated images with detection boxes
   save_annotated: true

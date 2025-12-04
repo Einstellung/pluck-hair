@@ -30,6 +30,7 @@ class TaskManagerConfig:
     Attributes:
         loop_delay_ms: Delay between frames in milliseconds.
         max_errors: Maximum consecutive errors before stopping.
+        save_images: Whether to persist raw images and detection records.
         save_annotated: Whether to save annotated images.
         show_preview: Show real-time preview window with OpenCV.
         async_storage: Use async storage with thread pool.
@@ -40,6 +41,7 @@ class TaskManagerConfig:
     """
     loop_delay_ms: int = 100
     max_errors: int = 10
+    save_images: bool = True
     save_annotated: bool = True
     show_preview: bool = True  # Show real-time detection preview
     async_storage: bool = True
@@ -185,7 +187,7 @@ class TaskManager:
             raise RuntimeError("Failed to open camera")
         
         # Initialize async storage executor
-        if self.config.async_storage:
+        if self.config.save_images and self.config.async_storage:
             self._storage_executor = ThreadPoolExecutor(
                 max_workers=self.config.storage_workers,
                 thread_name_prefix="storage"
@@ -331,18 +333,27 @@ class TaskManager:
             frame_for_stream = image
         
         # 5. Save images and detection records (async or sync)
-        if self.config.async_storage and self._storage_executor:
-            self._save_async(
-                image, image_path,
-                result.detections, timestamp,
-                annotated_image, annotated_path
-            )
+        if self.config.save_images:
+            if self.config.async_storage and self._storage_executor:
+                self._save_async(
+                    image, image_path,
+                    result.detections, timestamp,
+                    annotated_image, annotated_path
+                )
+            else:
+                self._save_sync(
+                    image, image_path,
+                    result.detections, timestamp,
+                    annotated_image, annotated_path
+                )
         else:
-            self._save_sync(
-                image, image_path,
-                result.detections, timestamp,
-                annotated_image, annotated_path
-            )
+            if result.detections:
+                records = [
+                    self._to_detection_record(det, image_path, timestamp)
+                    for det in result.detections
+                ]
+                self.database.save_detections_batch(records)
+                self._publish_event(records, image_path, annotated_path, timestamp)
 
         # 5.5 Publish frame to stream (honoring fps cap)
         self._publish_frame(

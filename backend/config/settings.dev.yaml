@@ -8,14 +8,14 @@ app:
 
 # Use mock camera for development without hardware
 camera:
-  # type: mock
-  # mode: directory  # random or directory
-  # width: 640
-  # height: 480
-  # image_dir: ./assets 
-  type: daheng
-  device_index: 1
-  exposure_time: 60000  # Exposure time in microseconds
+  type: mock
+  mode: directory  # random or directory
+  width: 640
+  height: 480
+  image_dir: ./assets 
+  # type: daheng
+  # device_index: 1
+  # exposure_time: 60000  # Exposure time in microseconds
 
 # Use local storage instead of MinIO
 storage:
@@ -51,12 +51,13 @@ vision:
 
 scheduler:
   loop_delay_ms: 10  # Slower for debugging
-  save_annotated: true
+  save_images: false
+  save_annotated: false
   show_preview: true  # Show real-time OpenCV preview window
 
 # Video stream (MJPEG)
 video_stream:
-  enabled: false
+  enabled: true
   stream: "pluck:frames"
   maxlen: 20
   fps_limit: 10.0
@@ -72,4 +73,4 @@ redis:
   maxlen: 2000
   read_count: 10
   block_ms: 5000
-  enabled: false
+  enabled: true

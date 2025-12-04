@@ -196,6 +196,7 @@ def run_detection_loop(config: AppConfig):
     task_config = TaskManagerConfig(
         loop_delay_ms=scheduler_config.loop_delay_ms,
         max_errors=scheduler_config.max_errors,
+        save_images=scheduler_config.save_images,
         save_annotated=scheduler_config.save_annotated,
         show_preview=scheduler_config.show_preview,
         async_storage=scheduler_config.async_storage,

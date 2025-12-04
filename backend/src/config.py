@@ -120,6 +120,7 @@ class SchedulerConfig:
     """Scheduler/TaskManager configuration."""
     loop_delay_ms: int = 100
     max_errors: int = 10
+    save_images: bool = True
     save_annotated: bool = True
     show_preview: bool = True  # Show real-time OpenCV preview window
     async_storage: bool = True
@@ -328,6 +329,7 @@ class AppConfig:
             "scheduler": {
                 "loop_delay_ms": self.scheduler.loop_delay_ms,
                 "max_errors": self.scheduler.max_errors,
+                "save_images": self.scheduler.save_images,
                 "save_annotated": self.scheduler.save_annotated,
                 "async_storage": self.scheduler.async_storage,
                 "storage_workers": self.scheduler.storage_workers,
