@@ -1,66 +1,28 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { RobotStats } from "@/store/robot-store";
-
-type OverlayBox = {
-  id: string;
-  x: number; // percentage
-  y: number; // percentage
-  w: number; // percentage
-  h: number; // percentage
-  confidence: number;
-  label: string;
-};
-
-function generateBoxes(count: number): OverlayBox[] {
-  const limit = Math.min(Math.max(count, 3), 8);
-  return Array.from({ length: limit }).map((_, idx) => {
-    const confidence = 92 + Math.random() * 6;
-    return {
-      id: `${Date.now()}-${idx}`,
-      x: 4 + Math.random() * 80,
-      y: 8 + Math.random() * 70,
-      w: 8 + Math.random() * 10,
-      h: 8 + Math.random() * 12,
-      confidence: Number(confidence.toFixed(1)),
-      label: "杂质",
-    };
-  });
-}
 
 interface VideoFeedProps {
   stats: RobotStats;
 }
 
 export function VideoFeed({ stats }: VideoFeedProps) {
-  const [boxes, setBoxes] = useState<OverlayBox[]>(() =>
-    generateBoxes(stats.currentTargets),
-  );
   const [errored, setErrored] = useState(false);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setBoxes(generateBoxes(stats.currentTargets));
-    }, 2500);
-    return () => clearInterval(id);
-  }, [stats.currentTargets]);
-
-  useEffect(() => {
-    setBoxes(generateBoxes(stats.currentTargets));
-  }, [stats.currentTargets]);
-
-  const overlayBoxes = useMemo(() => boxes, [boxes]);
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-xl border border-border bg-panel shadow-panel">
       <div className="absolute inset-0">
         {!errored ? (
           <Image
-            src="/api/stream/video"
-            alt="模拟视频流"
+            src={
+              process.env.NEXT_PUBLIC_API_BASE
+                ? `${process.env.NEXT_PUBLIC_API_BASE}/stream/video`
+                : "/api/stream/video"
+            }
+            alt="实时视频流"
             fill
             sizes="(min-width: 1280px) 60vw, 100vw"
             unoptimized
@@ -75,26 +37,6 @@ export function VideoFeed({ stats }: VideoFeedProps) {
       </div>
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
-
-      <div className="pointer-events-none absolute inset-0">
-        {overlayBoxes.map((box) => (
-          <div
-            key={box.id}
-            className="absolute"
-            style={{
-              left: `${box.x}%`,
-              top: `${box.y}%`,
-              width: `${box.w}%`,
-              height: `${box.h}%`,
-            }}
-          >
-            <div className="absolute inset-0 rounded-md border-2 border-red-500 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
-            <div className="absolute -top-3 left-0 rounded bg-red-500 px-2 py-1 text-[11px] font-semibold text-white shadow">
-              {box.label} {box.confidence}%
-            </div>
-          </div>
-        ))}
-      </div>
 
       <div className="absolute left-4 top-3 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-xs text-white backdrop-blur">
         <span className="h-2 w-2 rounded-full bg-accent shadow-[0_0_0_4px_rgba(22,163,74,0.18)]" />
