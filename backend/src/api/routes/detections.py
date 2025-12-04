@@ -2,6 +2,12 @@
 
 These endpoints provide access to detection records stored in the database.
 All logic is delegated to DetectionService.
+
+NOTE: bbox data is NOT exposed in API responses because:
+- Bounding boxes are already drawn on stored annotated images
+- Real-time video streaming (MJPEG) has boxes drawn on frames
+- This keeps API responses lightweight
+- Raw bbox data remains in database for future analysis if needed
 """
 
 from datetime import datetime
@@ -19,22 +25,16 @@ router = APIRouter()
 
 
 # ============================================================
-# Response Models
+# Response Models (DTO - Data Transfer Objects)
 # ============================================================
 
-class BoundingBoxResponse(BaseModel):
-    """Bounding box in response."""
-    x1: float
-    y1: float
-    x2: float
-    y2: float
-
-
 class DetectionResponse(BaseModel):
-    """Single detection in response."""
+    """Single detection in response.
+    
+    NOTE: bbox is intentionally excluded - boxes are drawn on images.
+    """
     id: str
     image_path: str
-    bbox: BoundingBoxResponse
     object_type: str
     confidence: float
     created_at: datetime
@@ -96,17 +96,11 @@ async def list_detections(
         offset,
     )
     
-    # Convert DTOs to response models
+    # Convert DTOs to response models (bbox excluded - drawn on images)
     items = [
         DetectionResponse(
             id=d.id,
             image_path=d.image_path,
-            bbox=BoundingBoxResponse(
-                x1=d.bbox_x1,
-                y1=d.bbox_y1,
-                x2=d.bbox_x2,
-                y2=d.bbox_y2,
-            ),
             object_type=d.object_type,
             confidence=d.confidence,
             created_at=d.created_at,
@@ -152,7 +146,7 @@ async def get_detection(
 ):
     """Get a specific detection by ID.
     
-    Returns detection details including bounding box and confidence.
+    Returns detection details (bbox excluded - drawn on images).
     """
     detection = await run_in_threadpool(service.get_detection, detection_id)
     
@@ -165,12 +159,6 @@ async def get_detection(
     return DetectionResponse(
         id=detection.id,
         image_path=detection.image_path,
-        bbox=BoundingBoxResponse(
-            x1=detection.bbox_x1,
-            y1=detection.bbox_y1,
-            x2=detection.bbox_x2,
-            y2=detection.bbox_y2,
-        ),
         object_type=detection.object_type,
         confidence=detection.confidence,
         created_at=detection.created_at,

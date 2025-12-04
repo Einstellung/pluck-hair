@@ -110,6 +110,26 @@ scheduler:
   # Save annotated images with detection boxes
   save_annotated: true
 
+# Video stream (MJPEG)
+video_stream:
+  enabled: true
+  stream: "pluck:frames"
+  maxlen: 50
+  fps_limit: 15.0
+  jpeg_quality: 80
+  block_ms: 2000
+
+# Redis (for real-time event streaming)
+redis:
+  url: "redis://localhost:6379/0"
+  stream: "pluck:detections"
+  consumer_group: "api"
+  consumer_name: "api-1"
+  maxlen: 10000
+  read_count: 10
+  block_ms: 5000
+  enabled: true
+
 # API settings (for API server mode)
 api:
   host: "0.0.0.0"
