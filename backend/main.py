@@ -165,6 +165,29 @@ def run_detection_loop(config: AppConfig):
             logger.info("Redis Streams publisher enabled for stream %s", config.redis.stream)
         except Exception as e:
             logger.warning(f"Failed to initialize Redis publisher: {e}")
+
+    # Optional Redis publisher for MJPEG frames
+    frame_publisher = None
+    if (
+        getattr(config, "redis", None)
+        and config.redis.enabled
+        and getattr(config, "video_stream", None)
+        and config.video_stream.enabled
+    ):
+        try:
+            from src.events.frame_stream import FrameStreamPublisher
+
+            frame_publisher = FrameStreamPublisher(
+                url=config.redis.url,
+                stream=config.video_stream.stream,
+                maxlen=config.video_stream.maxlen,
+            )
+            logger.info(
+                "Frame publisher enabled for stream %s",
+                config.video_stream.stream,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize frame publisher: {e}")
     
     # Create task manager
     from src.scheduler.task_manager import TaskManager, TaskManagerConfig
@@ -188,6 +211,8 @@ def run_detection_loop(config: AppConfig):
         database=database,
         config=task_config,
         event_publisher=event_publisher,
+        frame_publisher=frame_publisher,
+        video_stream_config=config.video_stream if getattr(config, "video_stream", None) else None,
     )
     
     logger.info("Starting detection loop...")

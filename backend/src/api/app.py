@@ -31,6 +31,7 @@ from src.storage.interfaces import Database, ImageStorage
 from .dependencies import AppState
 from .routes import detections, health, images
 from .routes import events as events_ws
+from .routes import video
 from .websocket_manager import WebSocketManager
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ def create_app(
     app.include_router(health.router, prefix="/api", tags=["Health"])
     app.include_router(detections.router, prefix="/api", tags=["Detections"])
     app.include_router(images.router, prefix="/api", tags=["Images"])
+    app.include_router(video.router, prefix="/api", tags=["Video"])
     app.include_router(events_ws.router, prefix="/api", tags=["Events"])
 
     # Start background Redis consumer for event streaming

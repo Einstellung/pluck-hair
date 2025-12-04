@@ -54,6 +54,15 @@ scheduler:
   save_annotated: true
   show_preview: true  # Show real-time OpenCV preview window
 
+# Video stream (MJPEG)
+video_stream:
+  enabled: false
+  stream: "pluck:frames"
+  maxlen: 20
+  fps_limit: 10.0
+  jpeg_quality: 70
+  block_ms: 2000
+
 # Redis (optional in development; set enabled=true when running Redis locally)
 redis:
   url: "redis://localhost:6379/0"

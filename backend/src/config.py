@@ -137,8 +137,19 @@ class RedisConfig:
     consumer_name: str = "api-1"
     maxlen: int = 10000
     read_count: int = 10
-    block_ms: int = 5000
-    enabled: bool = True # wether to enable Redis Streams
+    block_ms: int = 5000  # Max time (ms) to block XREAD when waiting for detection events
+    enabled: bool = True  # whether to enable Redis Streams
+
+
+@dataclass
+class VideoStreamConfig:
+    """Video streaming (MJPEG) settings."""
+    enabled: bool = True
+    stream: str = "pluck:frames"
+    maxlen: int = 50
+    fps_limit: float = 15.0
+    jpeg_quality: int = 80
+    block_ms: int = 2000  # Max time (ms) to block XREAD when waiting for new video frames
 
 
 @dataclass
@@ -194,6 +205,7 @@ class AppConfig:
     storage: StorageConfig = field(default_factory=StorageConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
+    video_stream: VideoStreamConfig = field(default_factory=VideoStreamConfig)
     redis: RedisConfig = field(default_factory=RedisConfig)
     
     # Path to the config file (for reference/logging)
@@ -216,6 +228,7 @@ class AppConfig:
         storage_data = data.get("storage", {})
         scheduler_data = data.get("scheduler", {})
         api_data = data.get("api", {})
+        video_stream_data = data.get("video_stream", {})
         redis_data = data.get("redis", {})
         
         return cls(
@@ -225,6 +238,7 @@ class AppConfig:
             storage=StorageConfig.from_dict(storage_data),
             scheduler=SchedulerConfig(**scheduler_data),
             api=ApiConfig.from_dict(api_data),
+            video_stream=VideoStreamConfig(**video_stream_data),
             redis=RedisConfig(**redis_data),
             _config_path=config_path,
         )
@@ -329,6 +343,14 @@ class AppConfig:
                     "allow_methods": self.api.cors.allow_methods,
                     "allow_headers": self.api.cors.allow_headers,
                 },
+            },
+            "video_stream": {
+                "enabled": self.video_stream.enabled,
+                "stream": self.video_stream.stream,
+                "maxlen": self.video_stream.maxlen,
+                "fps_limit": self.video_stream.fps_limit,
+                "jpeg_quality": self.video_stream.jpeg_quality,
+                "block_ms": self.video_stream.block_ms,
             },
             "redis": {
                 "url": self.redis.url,
