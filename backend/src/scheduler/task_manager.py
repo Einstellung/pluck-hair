@@ -17,6 +17,7 @@ import numpy as np
 from src.core.camera.base import CameraBase
 from src.core.vision.pipeline import VisionPipeline
 from src.core.vision.types import Detection
+from src.config import VideoStreamConfig
 from src.storage.interfaces import Database, DetectionRecord, ImageStorage, SessionRecord
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,13 @@ class DetectionEventPublisher(Protocol):
         ...
 
 
+class FramePublisher(Protocol):
+    """Protocol for publishing encoded frames."""
+
+    def publish(self, frame_bytes: bytes, frame_id: str, timestamp: str) -> None:
+        ...
+
+
 class TaskManager:
     """Main loop scheduler for the detection system.
     
@@ -92,6 +100,8 @@ class TaskManager:
         database: Database,
         config: Optional[TaskManagerConfig] = None,
         event_publisher: Optional[DetectionEventPublisher] = None,
+        frame_publisher: Optional[FramePublisher] = None,
+        video_stream_config: Optional[VideoStreamConfig] = None,
         register_signals: bool = True,
     ):
         """Initialize TaskManager.
@@ -103,6 +113,8 @@ class TaskManager:
             database: Database for detection records.
             config: Optional configuration.
             event_publisher: Optional publisher for detection events.
+            frame_publisher: Optional publisher for encoded frames.
+            video_stream_config: Optional video streaming configuration.
         """
         self.camera = camera
         self.pipeline = pipeline
@@ -110,6 +122,8 @@ class TaskManager:
         self.database = database
         self.config = config or TaskManagerConfig()
         self.event_publisher = event_publisher
+        self.frame_publisher = frame_publisher
+        self.video_stream_config = video_stream_config
         
         # State
         self._running = False
@@ -118,6 +132,7 @@ class TaskManager:
         self._total_detections = 0
         self._session_id: Optional[str] = None
         self._start_time: Optional[datetime] = None
+        self._last_frame_push_time: float = 0.0
         
         # Async storage
         self._storage_executor: Optional[ThreadPoolExecutor] = None
@@ -188,6 +203,7 @@ class TaskManager:
         self._error_count = 0
         self._storage_errors = 0
         self._pending_futures = []
+        self._last_frame_push_time = 0.0
         
         # Create session in database
         session = SessionRecord(
@@ -302,6 +318,17 @@ class TaskManager:
         if self.config.save_annotated and result.detections:
             annotated_image = self._draw_detections(image, result.detections)
             annotated_path = image_path.replace(".jpg", "_annotated.jpg")
+
+        # Frame for streaming (draw boxes if present, otherwise raw)
+        frame_for_stream = None
+        if result.detections:
+            frame_for_stream = (
+                annotated_image
+                if annotated_image is not None
+                else self._draw_detections(image, result.detections)
+            )
+        else:
+            frame_for_stream = image
         
         # 5. Save images and detection records (async or sync)
         if self.config.async_storage and self._storage_executor:
@@ -316,6 +343,13 @@ class TaskManager:
                 result.detections, timestamp,
                 annotated_image, annotated_path
             )
+
+        # 5.5 Publish frame to stream (honoring fps cap)
+        self._publish_frame(
+            frame_for_stream,
+            frame_id=f"{self._session_id}-{self._frame_count:06d}",
+            timestamp=timestamp,
+        )
         
         # 6. Update session periodically
         if self._frame_count % 100 == 0:
@@ -331,38 +365,74 @@ class TaskManager:
         annotated_path: Optional[str],
         timestamp: datetime,
     ):
-        """Publish detection event to external subscribers (if configured)."""
+        """Publish detection event to external subscribers (if configured).
+        
+        NOTE: bbox data is NOT included in the event payload because:
+        - Bounding boxes are already drawn on the MJPEG video stream
+        - This keeps WebSocket messages lightweight (JSON only)
+        - Historical bbox data can be queried via REST API if needed
+        """
         if not self.event_publisher or not records:
             return
+
+        # Count detections by type for statistics
+        by_type: dict[str, int] = {}
+        for record in records:
+            by_type[record.object_type] = by_type.get(record.object_type, 0) + 1
 
         payload = {
             "type": "detection",
             "session_id": self._session_id,
             "frame": self._frame_count,
-            "total_detections": self._total_detections,
             "timestamp": timestamp.isoformat() + "Z",
             "image_path": image_path,
             "annotated_path": annotated_path,
-            "detections": [
-                {
-                    "id": record.id,
-                    "object_type": record.object_type,
-                    "confidence": record.confidence,
-                    "bbox": {
-                        "x1": record.bbox_x1,
-                        "y1": record.bbox_y1,
-                        "x2": record.bbox_x2,
-                        "y2": record.bbox_y2,
-                    },
-                }
-                for record in records
-            ],
+            # Lightweight detection summary (no bbox - already drawn on frame)
+            "detection_count": len(records),
+            "by_type": by_type,
+            "total_detections": self._total_detections,
         }
 
         try:
             self.event_publisher.publish(payload)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to publish detection event: %s", exc)
+
+    def _publish_frame(
+        self,
+        frame: Optional[np.ndarray],
+        frame_id: str,
+        timestamp: datetime,
+    ) -> None:
+        """Publish encoded frame for MJPEG streaming."""
+        if (
+            frame is None
+            or not self.frame_publisher
+            or not self.video_stream_config
+            or not self.video_stream_config.enabled
+        ):
+            return
+
+        now = time.time()
+        min_interval = 1.0 / self.video_stream_config.fps_limit if self.video_stream_config.fps_limit > 0 else 0
+        if min_interval and (now - self._last_frame_push_time) < min_interval:
+            return
+
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, int(self.video_stream_config.jpeg_quality)]
+        success, buffer = cv2.imencode(".jpg", frame, encode_params)
+        if not success:
+            logger.warning("Failed to encode frame for streaming (id=%s)", frame_id)
+            return
+
+        try:
+            self.frame_publisher.publish(
+                buffer.tobytes(),
+                frame_id=frame_id,
+                timestamp=timestamp.isoformat() + "Z",
+            )
+            self._last_frame_push_time = now
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to publish frame: %s", exc)
 
     def _save_sync(
         self,
