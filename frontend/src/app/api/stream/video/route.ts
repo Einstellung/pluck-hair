@@ -1,28 +1,36 @@
 import { NextResponse } from "next/server";
 
-// Simple mock stream placeholder; replace with real MJPEG later.
-export async function GET() {
-  const svg = `
-    <svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mock video stream">
-      <defs>
-        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#0b1323"/>
-          <stop offset="100%" stop-color="#111f37"/>
-        </linearGradient>
-      </defs>
-      <rect width="1280" height="720" fill="url(#g)"/>
-      <rect x="180" y="120" width="920" height="480" rx="16" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
-      <text x="50%" y="50%" fill="#e5e7eb" font-size="42" font-family="sans-serif" font-weight="600" text-anchor="middle" dominant-baseline="middle">
-        模拟视频流 / Mock Video Stream
-      </text>
-    </svg>
-  `.trim();
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ?? process.env.API_BASE ?? "http://localhost:8000";
 
-  return new NextResponse(svg, {
-    status: 200,
-    headers: {
-      "Content-Type": "image/svg+xml",
-      "Cache-Control": "no-store",
-    },
-  });
+export async function GET() {
+  const upstream = `${API_BASE.replace(/\/$/, "")}/stream/video`;
+
+  try {
+    const resp = await fetch(upstream, { cache: "no-store" });
+
+    if (!resp.ok || !resp.body) {
+      return NextResponse.json(
+        { error: `Upstream video unavailable (${resp.status})` },
+        { status: 502 },
+      );
+    }
+
+    const headers = new Headers();
+    headers.set(
+      "Content-Type",
+      resp.headers.get("content-type") ?? "multipart/x-mixed-replace; boundary=frame",
+    );
+    headers.set("Cache-Control", "no-store");
+
+    return new NextResponse(resp.body as unknown as BodyInit, {
+      status: resp.status,
+      headers,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch upstream video stream", detail: String(error) },
+      { status: 502 },
+    );
+  }
 }
