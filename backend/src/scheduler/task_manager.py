@@ -1,12 +1,10 @@
 """Main loop scheduler for the detection system."""
 
 import logging
-import queue
 import signal
 import threading
 import time
 import uuid
-from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Protocol
@@ -19,6 +17,7 @@ from src.core.vision.pipeline import VisionPipeline
 from src.core.vision.types import Detection
 from src.config import VideoStreamConfig
 from src.storage.interfaces import Database, DetectionRecord, ImageStorage, SessionRecord
+from src.scheduler.storage_saver import StorageSaver, StorageSaverConfig
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +125,19 @@ class TaskManager:
         self.event_publisher = event_publisher
         self.frame_publisher = frame_publisher
         self.video_stream_config = video_stream_config
+        self.storage_saver = StorageSaver(
+            image_storage=self.image_storage,
+            database=self.database,
+            config=StorageSaverConfig(
+                save_images=self.config.save_images,
+                save_annotated=self.config.save_annotated,
+                async_storage=self.config.async_storage,
+                storage_workers=self.config.storage_workers,
+                max_pending_saves=self.config.max_pending_saves,
+                storage_retry_count=self.config.storage_retry_count,
+            ),
+            event_callback=self._publish_event,
+        )
         
         # State
         self._running = False
@@ -135,12 +147,6 @@ class TaskManager:
         self._session_id: Optional[str] = None
         self._start_time: Optional[datetime] = None
         self._last_frame_push_time: float = 0.0
-        
-        # Async storage
-        self._storage_executor: Optional[ThreadPoolExecutor] = None
-        self._pending_futures: List[Future] = []
-        self._storage_errors = 0
-        self._storage_lock = threading.Lock()
         
         # Register signal handlers for graceful shutdown when allowed
         if register_signals and threading.current_thread() is threading.main_thread():
@@ -186,25 +192,16 @@ class TaskManager:
         if not self.camera.open():
             raise RuntimeError("Failed to open camera")
         
-        # Initialize async storage executor
-        if self.config.save_images and self.config.async_storage:
-            self._storage_executor = ThreadPoolExecutor(
-                max_workers=self.config.storage_workers,
-                thread_name_prefix="storage"
-            )
-            logger.info(
-                f"Async storage enabled with {self.config.storage_workers} workers"
-            )
+        # Initialize storage saver (starts async executor if configured)
+        self.storage_saver.start()
         
         # Create new session
         self._session_id = str(uuid.uuid4())
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now()
         self._running = True
         self._frame_count = 0
         self._total_detections = 0
         self._error_count = 0
-        self._storage_errors = 0
-        self._pending_futures = []
         self._last_frame_push_time = 0.0
         
         # Create session in database
@@ -260,7 +257,7 @@ class TaskManager:
 
     def _process_frame(self):
         """Process a single frame."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now()
         
         # 1. Capture image
         capture_start = time.time()
@@ -332,28 +329,16 @@ class TaskManager:
         else:
             frame_for_stream = image
         
-        # 5. Save images and detection records (async or sync)
-        if self.config.save_images:
-            if self.config.async_storage and self._storage_executor:
-                self._save_async(
-                    image, image_path,
-                    result.detections, timestamp,
-                    annotated_image, annotated_path
-                )
-            else:
-                self._save_sync(
-                    image, image_path,
-                    result.detections, timestamp,
-                    annotated_image, annotated_path
-                )
-        else:
-            if result.detections:
-                records = [
-                    self._to_detection_record(det, image_path, timestamp)
-                    for det in result.detections
-                ]
-                self.database.save_detections_batch(records)
-                self._publish_event(records, image_path, annotated_path, timestamp)
+        # 5. Save images/detections
+        self.storage_saver.save(
+            image=image,
+            image_path=image_path,
+            detections=result.detections,
+            timestamp=timestamp,
+            annotated_image=annotated_image,
+            annotated_path=annotated_path,
+            session_id=self._session_id,
+        )
 
         # 5.5 Publish frame to stream (honoring fps cap)
         self._publish_frame(
@@ -367,7 +352,7 @@ class TaskManager:
             self._update_session()
         
         # 7. Clean up completed futures
-        self._cleanup_futures()
+        self.storage_saver.cleanup_futures()
 
     def _publish_event(
         self,
@@ -445,159 +430,6 @@ class TaskManager:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to publish frame: %s", exc)
 
-    def _save_sync(
-        self,
-        image: np.ndarray,
-        image_path: str,
-        detections: List[Detection],
-        timestamp: datetime,
-        annotated_image: Optional[np.ndarray],
-        annotated_path: Optional[str],
-    ):
-        """Save results synchronously (blocking)."""
-        # Save original image
-        full_path = self.image_storage.save(image, image_path)
-        
-        # Save detection records
-        if detections:
-            records = [
-                self._to_detection_record(det, full_path, timestamp)
-                for det in detections
-            ]
-            self.database.save_detections_batch(records)
-            self._publish_event(records, full_path, annotated_path, timestamp)
-        
-        # Save annotated image
-        if annotated_image is not None and annotated_path:
-            self.image_storage.save(annotated_image, annotated_path)
-
-    def _save_async(
-        self,
-        image: np.ndarray,
-        image_path: str,
-        detections: List[Detection],
-        timestamp: datetime,
-        annotated_image: Optional[np.ndarray],
-        annotated_path: Optional[str],
-    ):
-        """Save results asynchronously (non-blocking)."""
-        # Check if we have too many pending operations
-        with self._storage_lock:
-            pending_count = len([f for f in self._pending_futures if not f.done()])
-            
-        if pending_count >= self.config.max_pending_saves:
-            logger.warning(
-                f"Storage queue full ({pending_count} pending), "
-                "falling back to sync save"
-            )
-            self._save_sync(
-                image, image_path, detections, timestamp,
-                annotated_image, annotated_path
-            )
-            return
-        
-        # Submit async save task
-        future = self._storage_executor.submit(
-            self._save_with_retry,
-            image.copy(),  # Copy to avoid race conditions
-            image_path,
-            detections,
-            timestamp,
-            annotated_image.copy() if annotated_image is not None else None,
-            annotated_path,
-        )
-        
-        with self._storage_lock:
-            self._pending_futures.append(future)
-
-    def _save_with_retry(
-        self,
-        image: np.ndarray,
-        image_path: str,
-        detections: List[Detection],
-        timestamp: datetime,
-        annotated_image: Optional[np.ndarray],
-        annotated_path: Optional[str],
-    ):
-        """Save with retry logic for resilience."""
-        last_error = None
-        
-        for attempt in range(self.config.storage_retry_count):
-            try:
-                # Save original image
-                full_path = self.image_storage.save(image, image_path)
-                
-                # Save detection records
-                if detections:
-                    records = [
-                        self._to_detection_record(det, full_path, timestamp)
-                        for det in detections
-                    ]
-                    self.database.save_detections_batch(records)
-                    self._publish_event(records, full_path, annotated_path, timestamp)
-                
-                # Save annotated image
-                if annotated_image is not None and annotated_path:
-                    self.image_storage.save(annotated_image, annotated_path)
-                
-                # Success
-                return
-                
-            except Exception as e:
-                last_error = e
-                logger.warning(
-                    f"Storage attempt {attempt + 1}/{self.config.storage_retry_count} "
-                    f"failed: {e}"
-                )
-                if attempt < self.config.storage_retry_count - 1:
-                    time.sleep(0.5 * (attempt + 1))  # Exponential backoff
-        
-        # All retries failed
-        with self._storage_lock:
-            self._storage_errors += 1
-        logger.error(
-            f"Storage failed after {self.config.storage_retry_count} attempts: "
-            f"{last_error}"
-        )
-
-    def _cleanup_futures(self):
-        """Clean up completed futures and check for errors."""
-        with self._storage_lock:
-            # Remove completed futures
-            still_pending = []
-            for future in self._pending_futures:
-                if future.done():
-                    # Check if there was an exception
-                    try:
-                        future.result()  # Will raise if there was an error
-                    except Exception as e:
-                        logger.error(f"Async storage task failed: {e}")
-                else:
-                    still_pending.append(future)
-            
-            self._pending_futures = still_pending
-
-    def _to_detection_record(
-        self,
-        detection: Detection,
-        image_path: str,
-        timestamp: datetime,
-    ) -> DetectionRecord:
-        """Convert Detection to DetectionRecord."""
-        # object_type is a string, not an enum
-        obj_type = detection.object_type if isinstance(detection.object_type, str) else detection.object_type.value
-        return DetectionRecord(
-            id=str(uuid.uuid4()),
-            image_path=image_path,
-            bbox_x1=detection.bbox.x1,
-            bbox_y1=detection.bbox.y1,
-            bbox_x2=detection.bbox.x2,
-            bbox_y2=detection.bbox.y2,
-            object_type=obj_type,
-            confidence=detection.confidence,
-            created_at=timestamp,
-            session_id=self._session_id,
-        )
 
     def _draw_detections(
         self,
@@ -685,26 +517,11 @@ class TaskManager:
             logger.warning(f"Error closing camera: {e}")
         
         # Wait for pending storage operations
-        if self._storage_executor:
-            pending_count = len([f for f in self._pending_futures if not f.done()])
-            if pending_count > 0:
-                logger.info(f"Waiting for {pending_count} pending storage operations...")
-            
-            # Wait for all pending futures with timeout
-            for future in self._pending_futures:
-                try:
-                    future.result(timeout=30)
-                except Exception as e:
-                    logger.error(f"Pending storage task failed: {e}")
-            
-            # Shutdown executor
-            self._storage_executor.shutdown(wait=True)
-            self._storage_executor = None
-            logger.info("Storage executor shut down")
+        self.storage_saver.shutdown()
         
         # Finalize session
         if self._session_id:
-            end_time = datetime.utcnow()
+            end_time = datetime.now()
             duration = (end_time - self._start_time).total_seconds()
             
             session = SessionRecord(
@@ -727,6 +544,6 @@ class TaskManager:
                 f"  Duration: {duration:.1f}s\n"
                 f"  Frames: {self._frame_count}\n"
                 f"  Detections: {self._total_detections}\n"
-                f"  Storage errors: {self._storage_errors}\n"
+                f"  Storage errors: {self.storage_saver.storage_errors}\n"
                 f"  FPS: {fps_str}"
             )
