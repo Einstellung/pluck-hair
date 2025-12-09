@@ -18,6 +18,7 @@ from src.core.vision.types import Detection
 from src.config import VideoStreamConfig
 from src.storage.interfaces import Database, DetectionRecord, ImageStorage, SessionRecord
 from src.scheduler.storage_saver import StorageSaver, StorageSaverConfig
+from src.scheduler.tasks import DetectionTask, Task
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,7 @@ class TaskManager:
         pipeline: VisionPipeline,
         image_storage: ImageStorage,
         database: Database,
+        task: Optional[Task] = None,
         config: Optional[TaskManagerConfig] = None,
         event_publisher: Optional[DetectionEventPublisher] = None,
         frame_publisher: Optional[FramePublisher] = None,
@@ -121,6 +123,7 @@ class TaskManager:
         self.pipeline = pipeline
         self.image_storage = image_storage
         self.database = database
+        self.task: Task = task or DetectionTask(pipeline=self.pipeline)
         self.config = config or TaskManagerConfig()
         self.event_publisher = event_publisher
         self.frame_publisher = frame_publisher
@@ -203,6 +206,12 @@ class TaskManager:
         self._total_detections = 0
         self._error_count = 0
         self._last_frame_push_time = 0.0
+
+        # Reset task state for new session
+        try:
+            self.task.reset()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to reset task state: %s", exc)
         
         # Create session in database
         session = SessionRecord(
@@ -269,8 +278,8 @@ class TaskManager:
             f"Frame {self._frame_count}: captured in {capture_time:.1f}ms"
         )
         
-        # 2. Run detection pipeline
-        result = self.pipeline.run(image)
+        # 2. Run task iteration (wraps pipeline)
+        result = self.task.run_iteration(image)
         
         detection_count = len(result.detections)
         self._total_detections += detection_count
@@ -278,7 +287,7 @@ class TaskManager:
         logger.info(
             f"Frame {self._frame_count}: "
             f"{detection_count} detections, "
-            f"{result.processing_time_ms:.1f}ms processing"
+            f"{result.metadata.get('pipeline_time_ms', 0):.1f}ms processing"
         )
         
         # 2.5 Real-time preview with OpenCV (if enabled)
@@ -346,6 +355,17 @@ class TaskManager:
             frame_id=f"{self._session_id}-{self._frame_count:06d}",
             timestamp=timestamp,
         )
+
+        # 5.6 Handle task completion
+        if result.is_done:
+            logger.info(
+                "Task '%s' reported completion after %s frames in session %s",
+                self.task.name,
+                self._frame_count,
+                self._session_id,
+            )
+            # Stop main loop; future workflow can switch tasks here.
+            self.stop()
         
         # 6. Update session periodically
         if self._frame_count % 100 == 0:

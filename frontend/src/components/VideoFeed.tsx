@@ -17,11 +17,7 @@ export function VideoFeed({ stats }: VideoFeedProps) {
       <div className="absolute inset-0">
         {!errored ? (
           <Image
-            src={
-              process.env.NEXT_PUBLIC_API_BASE
-                ? `${process.env.NEXT_PUBLIC_API_BASE}/stream/video`
-                : "/api/stream/video"
-            }
+            src="/api/stream/video"
             alt="实时视频流"
             fill
             sizes="(min-width: 1280px) 60vw, 100vw"

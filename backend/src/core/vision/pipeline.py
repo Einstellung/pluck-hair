@@ -159,5 +159,3 @@ class VisionPipeline:
 
 # Import ProcessStep at module level for type hints
 from .steps.base import ProcessStep  # noqa: E402, F401
-
-
