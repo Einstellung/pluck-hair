@@ -15,7 +15,7 @@ camera:
   # image_dir: ./assets 
   type: daheng
   device_index: 1
-  exposure_time: 7000  # Exposure time in microseconds
+  exposure_time: 13000  # Exposure time in microseconds
   white_balance_mode: once
 
 # Use local storage instead of MinIO
