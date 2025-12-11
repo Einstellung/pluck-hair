@@ -45,6 +45,7 @@ vision:
           model: assets/best.pt
           conf: 0.25  # Lower threshold for testing
           device: auto  # Use GPU if available
+          batch_size: 16
       - name: merge
         type: merge_tiles
         params:
@@ -54,7 +55,7 @@ scheduler:
   loop_delay_ms: 10  # Slower for debugging
   save_images: false
   save_annotated: false
-  show_preview: true  # Show real-time OpenCV preview window
+  show_preview: false  # Show real-time OpenCV preview window
 
 # Video stream (MJPEG)
 video_stream:
