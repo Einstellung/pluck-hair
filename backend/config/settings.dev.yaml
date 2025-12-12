@@ -15,7 +15,7 @@ camera:
   # image_dir: ./assets 
   type: daheng
   device_index: 1
-  exposure_time: 13000  # Exposure time in microseconds
+  exposure_time: 9000  # Exposure time in microseconds
   white_balance_mode: once
 
 # Use local storage instead of MinIO
@@ -55,6 +55,26 @@ scheduler:
   save_images: false
   save_annotated: false
   show_preview: true  # Show real-time OpenCV preview window
+
+# Task configuration (detection + optional tracking)
+task:
+  name: "detection"
+  tracker:
+    enabled: false             # Disable ByteTrack for static scene; use smoothing instead
+    track_thresh: 0.5          # High confidence threshold for tracking
+    track_buffer: 30           # Frames to keep lost tracks
+    match_thresh: 0.8          # IoU threshold for matching
+    min_hits: 3                # Consecutive hits before track is confirmed
+    frame_rate: 30             # Expected frame rate
+  smoothing:
+    enabled: true
+    alpha: 0.12                # 0.1-0.2 gives a ~5-10 frame low-pass effect
+    min_iou: 0.2               # Match to previous box for blending
+    max_center_jump: 40.0      # Pixels; reset smoothing if jump exceeds this
+  done_condition:
+    consecutive_empty: 3     # Stop after N consecutive empty frames
+    max_iterations: 1000     # Stop after N iterations
+    timeout_seconds: 60      # Stop after timeout
 
 # Video stream (MJPEG)
 video_stream:

@@ -24,6 +24,7 @@ dependencies = [
     # Config
     "pyyaml>=6.0",
     "iai-gxipy>=2.0.2407.9061",
+    "boxmot>=15.0.10",
 ]
 
 [project.optional-dependencies]

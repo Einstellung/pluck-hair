@@ -191,9 +191,10 @@ def run_detection_loop(config: AppConfig):
     
     # Create task manager
     from src.scheduler.task_manager import TaskManager, TaskManagerConfig
+    from src.scheduler.tasks import DetectionTask
     
     scheduler_config = config.scheduler
-    task_config = TaskManagerConfig(
+    manager_config = TaskManagerConfig(
         loop_delay_ms=scheduler_config.loop_delay_ms,
         max_errors=scheduler_config.max_errors,
         save_images=scheduler_config.save_images,
@@ -205,12 +206,27 @@ def run_detection_loop(config: AppConfig):
         storage_retry_count=scheduler_config.storage_retry_count,
     )
     
+    # Create detection task with optional tracker
+    task_config = config.task
+    task = DetectionTask(
+        pipeline=pipeline,
+        tracker_config=task_config.tracker,
+        smoothing_config=task_config.smoothing,
+        name=task_config.name,
+    )
+    logger.info(
+        f"Created DetectionTask: name={task_config.name}, "
+        f"tracker_enabled={task_config.tracker.enabled}, "
+        f"smoothing_enabled={task_config.smoothing.enabled}"
+    )
+    
     manager = TaskManager(
         camera=camera,
         pipeline=pipeline,
         image_storage=image_storage,
         database=database,
-        config=task_config,
+        task=task,
+        config=manager_config,
         event_publisher=event_publisher,
         frame_publisher=frame_publisher,
         video_stream_config=config.video_stream if getattr(config, "video_stream", None) else None,

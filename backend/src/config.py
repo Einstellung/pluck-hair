@@ -130,6 +130,56 @@ class SchedulerConfig:
 
 
 @dataclass
+class TrackerConfig:
+    """ByteTrack tracker configuration."""
+    enabled: bool = False
+    track_thresh: float = 0.5       # High confidence threshold for tracking
+    track_buffer: int = 30          # Frames to keep lost tracks before deletion
+    match_thresh: float = 0.8       # IoU threshold for matching
+    min_hits: int = 3               # Consecutive hits before track is confirmed
+    frame_rate: int = 30            # Expected frame rate (affects Kalman filter)
+
+
+@dataclass
+class SmoothingConfig:
+    """Simple temporal smoothing for static objects."""
+    enabled: bool = False
+    alpha: float = 0.2              # Low-pass factor; smaller = smoother, slower
+    min_iou: float = 0.1            # Match threshold to reuse previous box
+    max_center_jump: float = 50.0   # Pixels; reset smoothing if jump is too large
+
+
+@dataclass
+class DoneConditionConfig:
+    """Task completion condition configuration."""
+    consecutive_empty: Optional[int] = None    # Stop after N consecutive empty frames
+    max_iterations: Optional[int] = None       # Stop after N iterations
+    timeout_seconds: Optional[float] = None    # Stop after timeout
+
+
+@dataclass
+class TaskConfig:
+    """Task configuration."""
+    name: str = "detection"
+    tracker: TrackerConfig = field(default_factory=TrackerConfig)
+    smoothing: SmoothingConfig = field(default_factory=SmoothingConfig)
+    done_condition: DoneConditionConfig = field(default_factory=DoneConditionConfig)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TaskConfig":
+        """Create TaskConfig from dictionary."""
+        tracker_data = data.get("tracker", {})
+        smoothing_data = data.get("smoothing", {})
+        done_condition_data = data.get("done_condition", {})
+        return cls(
+            name=data.get("name", "detection"),
+            tracker=TrackerConfig(**tracker_data),
+            smoothing=SmoothingConfig(**smoothing_data),
+            done_condition=DoneConditionConfig(**done_condition_data),
+        )
+
+
+@dataclass
 class RedisConfig:
     """Redis settings for inter-process messaging."""
     url: str = "redis://localhost:6379/0"
@@ -205,6 +255,7 @@ class AppConfig:
     vision: VisionConfig = field(default_factory=VisionConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
+    task: TaskConfig = field(default_factory=TaskConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     video_stream: VideoStreamConfig = field(default_factory=VideoStreamConfig)
     redis: RedisConfig = field(default_factory=RedisConfig)
@@ -228,6 +279,7 @@ class AppConfig:
         vision_data = data.get("vision", {})
         storage_data = data.get("storage", {})
         scheduler_data = data.get("scheduler", {})
+        task_data = data.get("task", {})
         api_data = data.get("api", {})
         video_stream_data = data.get("video_stream", {})
         redis_data = data.get("redis", {})
@@ -238,6 +290,7 @@ class AppConfig:
             vision=VisionConfig.from_dict(vision_data),
             storage=StorageConfig.from_dict(storage_data),
             scheduler=SchedulerConfig(**scheduler_data),
+            task=TaskConfig.from_dict(task_data),
             api=ApiConfig.from_dict(api_data),
             video_stream=VideoStreamConfig(**video_stream_data),
             redis=RedisConfig(**redis_data),
@@ -335,6 +388,28 @@ class AppConfig:
                 "storage_workers": self.scheduler.storage_workers,
                 "max_pending_saves": self.scheduler.max_pending_saves,
                 "storage_retry_count": self.scheduler.storage_retry_count,
+            },
+            "task": {
+                "name": self.task.name,
+                "tracker": {
+                    "enabled": self.task.tracker.enabled,
+                    "track_thresh": self.task.tracker.track_thresh,
+                    "track_buffer": self.task.tracker.track_buffer,
+                    "match_thresh": self.task.tracker.match_thresh,
+                    "min_hits": self.task.tracker.min_hits,
+                    "frame_rate": self.task.tracker.frame_rate,
+                },
+                "smoothing": {
+                    "enabled": self.task.smoothing.enabled,
+                    "alpha": self.task.smoothing.alpha,
+                    "min_iou": self.task.smoothing.min_iou,
+                    "max_center_jump": self.task.smoothing.max_center_jump,
+                },
+                "done_condition": {
+                    "consecutive_empty": self.task.done_condition.consecutive_empty,
+                    "max_iterations": self.task.done_condition.max_iterations,
+                    "timeout_seconds": self.task.done_condition.timeout_seconds,
+                },
             },
             "api": {
                 "host": self.api.host,
